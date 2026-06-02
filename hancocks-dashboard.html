@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hancocks London — Analytics Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: #2a2a2a;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: rgba(201,168,76,0.15);
+    --text: #f0ece4;
+    --text-muted: #7a7570;
+    --text-dim: #4a4540;
+    --green: #4caf7d;
+    --red: #e05a5a;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .header-left h1 {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .header-left h1 span { color: var(--gold); }
+  .header-left p {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .last-updated {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-align: right;
+  }
+  .refresh-btn {
+    background: var(--gold-dim);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 8px 20px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { background: var(--gold); color: #000; }
+
+  /* Loading */
+  .loading-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 1000;
+    transition: opacity 0.5s;
+  }
+  .loading-screen.hidden { opacity: 0; pointer-events: none; }
+  .loading-logo {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+  }
+  .loading-bar {
+    width: 200px;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .loading-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--gold);
+    animation: loadbar 1.5s ease forwards;
+  }
+  @keyframes loadbar { to { left: 0; } }
+  .loading-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Main layout */
+  .main { padding: 32px 48px 48px; }
+
+  /* Error banner */
+  .error-banner {
+    background: rgba(224,90,90,0.1);
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 12px 20px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  /* Section label */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Scorecards */
+  .scorecards-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-bottom: 32px;
+    border: 1px solid var(--border);
+  }
+  .scorecard {
+    background: var(--surface);
+    padding: 20px 22px;
+    position: relative;
+    transition: background 0.2s;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fadeUp 0.4s ease forwards;
+  }
+  .scorecard:hover { background: var(--surface2); }
+  .scorecard-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .scorecard-value {
+    font-family: var(--font-display);
+    font-size: 38px;
+    font-weight: 300;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .scorecard-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .scorecard-period {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .scorecard-change {
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .scorecard-change.up { color: var(--green); }
+  .scorecard-change.down { color: var(--red); }
+  .scorecard-change.neutral { color: var(--text-muted); }
+  .scorecard-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--gold);
+    width: 0;
+    transition: width 1s ease;
+  }
+  .scorecard-type {
+    position: absolute;
+    top: 12px; right: 14px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .scorecard-type.conversion { color: var(--gold); opacity: 0.7; }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Charts row */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    opacity: 0;
+    animation: fadeUp 0.4s ease 0.3s forwards;
+  }
+  .chart-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+  }
+  .chart-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+  }
+
+  /* Bottom row */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* Table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .data-table th {
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+  .data-table td {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(42,42,42,0.5);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td.num {
+    text-align: right;
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--gold-light);
+  }
+  .data-table td .bar-bg {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    margin-top: 4px;
+  }
+  .data-table td .bar-fill {
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+  }
+
+  /* Device donut */
+  .donut-wrap {
+    position: relative;
+    height: 160px;
+    margin: 16px 0;
+  }
+  .donut-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .donut-center-val {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .donut-center-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .device-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .device-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+  .device-legend-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+  }
+  .device-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .device-legend-val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+  }
+
+  /* Day of week */
+  .dow-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 120px;
+    margin-top: 16px;
+  }
+  .dow-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .dow-bar {
+    width: 100%;
+    background: var(--gold-dim);
+    border-top: 1px solid var(--gold);
+    transition: background 0.2s;
+    min-height: 4px;
+  }
+  .dow-bar:hover { background: rgba(201,168,76,0.35); }
+  .dow-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .dow-val {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .footer span { color: var(--gold); opacity: 0.6; }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 1px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">Hancocks London</div>
+  <div class="loading-bar"></div>
+  <div class="loading-text">Loading Analytics</div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Hancocks <span>London</span></h1>
+    <p>Analytics Dashboard &nbsp;·&nbsp; GA4 Property 465868062</p>
+  </div>
+  <div class="header-right">
+    <div class="last-updated" id="lastUpdated">Fetching data…</div>
+    <button class="refresh-btn" onclick="loadAllData()">↺ &nbsp;Refresh</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Scorecards -->
+  <div class="section-label">Conversion Events — Last 30 Days</div>
+  <div class="scorecards-grid" id="scorecardsGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Trend + Traffic Source -->
+  <div class="section-label">Trend & Traffic</div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Daily Event Trend</div>
+      <div class="chart-subtitle">Total events across all tracked interactions</div>
+      <div class="chart-wrap">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">By Traffic Source</div>
+      <div class="chart-subtitle">Last 30 day sessions by channel</div>
+      <div class="chart-wrap" style="height:auto;">
+        <table class="data-table" id="sourceTable">
+          <thead><tr><th>Source</th><th style="text-align:right">Events</th></tr></thead>
+          <tbody id="sourceTableBody"><tr><td colspan="2" style="color:var(--text-dim)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location + Device + Day of Week -->
+  <div class="section-label">Audience Breakdown</div>
+  <div class="bottom-row">
+    <div class="chart-card">
+      <div class="chart-title">By Location</div>
+      <div class="chart-subtitle">Top countries by event volume</div>
+      <table class="data-table" id="locationTable">
+        <thead><tr><th>Country</th><th style="text-align:right">Events</th></tr></thead>
+        <tbody id="locationTableBody"><tr><td colspan="2" style="color:var(--text-dim)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">By Device</div>
+      <div class="chart-subtitle">Device category breakdown</div>
+      <div class="donut-wrap">
+        <canvas id="deviceChart"></canvas>
+        <div class="donut-center">
+          <div class="donut-center-val" id="donutTotal">—</div>
+          <div class="donut-center-label">Total</div>
+        </div>
+      </div>
+      <div class="device-legend" id="deviceLegend"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">By Day of Week</div>
+      <div class="chart-subtitle">Average events per day</div>
+      <div class="dow-bars" id="dowBars"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>Data source: Google Sheets &nbsp;·&nbsp; GA4 Property <span>465868062</span> &nbsp;·&nbsp; Measurement ID <span>G-2VGH6WDK21</span></div>
+    <div>Built by <span>Toast Media</span></div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1yUb4aqW9VWUHifXscw5Tf8m9qkN5Z-gwkv06LtSH-VU';
+
+const EVENTS = [
+  { key: 'whatsapp_click',    label: 'WhatsApp',       type: 'conversion' },
+  { key: 'phone_call_click',  label: 'Phone Call',     type: 'conversion' },
+  { key: 'enquiry_click',     label: 'Enquiry',        type: 'conversion' },
+  { key: 'appointment_click', label: 'Appointment',    type: 'conversion' },
+  { key: 'email_click',       label: 'Email Click',    type: 'conversion' },
+  { key: 'newsletter_signup', label: 'Newsletter',     type: 'engagement' },
+  { key: 'site_search',       label: 'Site Search',    type: 'engagement' },
+  { key: 'content_click',     label: 'Content Click',  type: 'engagement' },
+  { key: 'scroll_50_product', label: 'Product Scroll', type: 'engagement' },
+  { key: 'share_click',       label: 'Share',          type: 'engagement' },
+];
+
+let trendChartInstance = null;
+let deviceChartInstance = null;
+
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  const json = JSON.parse(text.substring(47).slice(0,-2));
+  return json.table;
+}
+
+function tableToRows(table) {
+  if (!table || !table.rows) return [];
+  const headers = table.cols.map(c => c.label);
+  return table.rows.map(row => {
+    const obj = {};
+    row.c.forEach((cell, i) => {
+      obj[headers[i]] = cell ? cell.v : null;
+    });
+    return obj;
+  });
+}
+
+async function loadAllData() {
+  document.getElementById('lastUpdated').innerHTML = '<span class="spinner"></span>Refreshing…';
+  try {
+    const [eventSummary, dailyTrend, bySource, byLocation, byDevice, byDow] = await Promise.all([
+      fetchSheet('Event Summary'),
+      fetchSheet('Daily Trend'),
+      fetchSheet('By Traffic Source'),
+      fetchSheet('By Location'),
+      fetchSheet('By Device'),
+      fetchSheet('By Day of Week'),
+    ]);
+
+    renderScorecards(tableToRows(eventSummary));
+    renderTrendChart(tableToRows(dailyTrend));
+    renderSourceTable(tableToRows(bySource));
+    renderLocationTable(tableToRows(byLocation));
+    renderDeviceChart(tableToRows(byDevice));
+    renderDowChart(tableToRows(byDow));
+
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('errorBanner').classList.remove('visible');
+  } catch(e) {
+    console.error(e);
+    showError('Could not load data from Google Sheets. Make sure the sheet is shared publicly (Anyone with link → Viewer). Error: ' + e.message);
+    document.getElementById('lastUpdated').textContent = 'Failed to load';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+
+function renderScorecards(rows) {
+  const grid = document.getElementById('scorecardsGrid');
+  const map = {};
+  rows.forEach(r => {
+    const key = (r['Event'] || '').toString().trim().toLowerCase();
+    map[key] = r;
+  });
+
+  grid.innerHTML = EVENTS.map((ev, i) => {
+    const r = map[ev.key] || {};
+    const val = r['Last 30 days'] ?? 0;
+    const prev = r['Prev 30 days'] ?? 0;
+    const changeRaw = r['Change %'] ?? null;
+    const changeIsNew = changeRaw === 'New' || changeRaw === 'new';
+    const change = changeIsNew ? null : (typeof changeRaw === 'number' ? changeRaw : null);
+    const changeStr = changeIsNew ? 'New' : change !== null ? (change > 0 ? `+${(change*100).toFixed(0)}%` : `${(change*100).toFixed(0)}%`) : '—';
+    const changeClass = changeIsNew ? 'neutral' : change === null ? 'neutral' : change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
+    const arrow = changeIsNew ? '' : change === null ? '' : change > 0 ? '↑' : change < 0 ? '↓' : '';
+    const barPct = prev > 0 ? Math.min(100, (val/Math.max(val,prev))*100) : (val > 0 ? 100 : 0);
+
+    return `<div class="scorecard" style="animation-delay:${i*0.05}s">
+      <div class="scorecard-type ${ev.type}">${ev.type}</div>
+      <div class="scorecard-label">${ev.label}</div>
+      <div class="scorecard-value">${val.toLocaleString()}</div>
+      <div class="scorecard-meta">
+        <span class="scorecard-period">30 days</span>
+        <span class="scorecard-change ${changeClass}">${arrow} ${changeStr}</span>
+      </div>
+      <div class="scorecard-bar" style="width:${barPct}%"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTrendChart(rows) {
+  const canvas = document.getElementById('trendChart');
+  if (trendChartInstance) trendChartInstance.destroy();
+  if (!rows.length) return;
+
+  // Sum all numeric columns per date row
+  const labels = [];
+  const values = [];
+  rows.forEach(r => {
+    const dateKey = Object.keys(r)[0];
+    const date = r[dateKey];
+    if (!date) return;
+    let total = 0;
+    Object.keys(r).forEach(k => {
+      if (k !== dateKey && typeof r[k] === 'number') total += r[k];
+    });
+    const d = new Date(date);
+    labels.push(d.toLocaleDateString('en-GB', {day:'numeric',month:'short'}));
+    values.push(total);
+  });
+
+  trendChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#c9a84c',
+        borderWidth: 1.5,
+        backgroundColor: 'rgba(201,168,76,0.06)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#c9a84c',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#181818',
+        borderColor: '#2a2a2a',
+        borderWidth: 1,
+        titleColor: '#7a7570',
+        bodyColor: '#f0ece4',
+        titleFont: { family: 'DM Sans', size: 11 },
+        bodyFont: { family: 'Cormorant Garamond', size: 18 },
+        padding: 12,
+      }},
+      scales: {
+        x: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 }, maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function renderSourceTable(rows) {
+  const body = document.getElementById('sourceTableBody');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="2" style="color:var(--text-dim)">No data</td></tr>'; return; }
+  const sourceKey = Object.keys(rows[0])[0];
+  const valKey = Object.keys(rows[0])[1];
+  const max = Math.max(...rows.map(r => r[valKey] || 0));
+  body.innerHTML = rows.slice(0,8).map(r => `
+    <tr><td>
+      <div>${r[sourceKey] || 'Unknown'}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${max>0?((r[valKey]||0)/max*100):0}%"></div></div>
+    </td>
+    <td class="num">${(r[valKey]||0).toLocaleString()}</td></tr>
+  `).join('');
+}
+
+function renderLocationTable(rows) {
+  const body = document.getElementById('locationTableBody');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="2" style="color:var(--text-dim)">No data</td></tr>'; return; }
+  const locKey = Object.keys(rows[0])[0];
+  const valKey = Object.keys(rows[0])[1];
+  const max = Math.max(...rows.map(r => r[valKey] || 0));
+  body.innerHTML = rows.slice(0,8).map(r => `
+    <tr><td>
+      <div>${r[locKey] || 'Unknown'}</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${max>0?((r[valKey]||0)/max*100):0}%"></div></div>
+    </td>
+    <td class="num">${(r[valKey]||0).toLocaleString()}</td></tr>
+  `).join('');
+}
+
+function renderDeviceChart(rows) {
+  const canvas = document.getElementById('deviceChart');
+  if (deviceChartInstance) deviceChartInstance.destroy();
+  if (!rows.length) return;
+
+  const devKey = Object.keys(rows[0])[0];
+  const valKey = Object.keys(rows[0])[1];
+  const labels = rows.map(r => r[devKey] || 'Unknown');
+  const values = rows.map(r => r[valKey] || 0);
+  const total = values.reduce((a,b) => a+b, 0);
+  const colors = ['#c9a84c','#4caf7d','#5b9bd5','#e8c97a','#888'];
+
+  document.getElementById('donutTotal').textContent = total.toLocaleString();
+
+  deviceChartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#181818',
+        borderColor: '#2a2a2a',
+        borderWidth: 1,
+        titleColor: '#7a7570',
+        bodyColor: '#f0ece4',
+        padding: 10,
+      }}
+    }
+  });
+
+  document.getElementById('deviceLegend').innerHTML = labels.map((l,i) => `
+    <div class="device-legend-item">
+      <div class="device-legend-left">
+        <div class="device-dot" style="background:${colors[i]}"></div>
+        <span>${l}</span>
+      </div>
+      <div class="device-legend-val">${values[i].toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+function renderDowChart(rows) {
+  const container = document.getElementById('dowBars');
+  if (!rows.length) { container.innerHTML = '<p style="color:var(--text-dim);font-size:12px">No data</p>'; return; }
+  const dayKey = Object.keys(rows[0])[0];
+  const valKey = Object.keys(rows[0])[1];
+  const max = Math.max(...rows.map(r => r[valKey] || 0));
+
+  container.innerHTML = rows.map(r => {
+    const pct = max > 0 ? ((r[valKey]||0)/max*100) : 0;
+    const day = (r[dayKey]||'').toString().substring(0,3);
+    return `<div class="dow-bar-wrap">
+      <div class="dow-val">${(r[valKey]||0)}</div>
+      <div class="dow-bar" style="height:${Math.max(4,pct)}%"></div>
+      <div class="dow-label">${day}</div>
+    </div>`;
+  }).join('');
+}
+
+// Init
+window.addEventListener('load', async () => {
+  await loadAllData();
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hidden');
+  }, 800);
+});
+</script>
+</body>
+</html>
