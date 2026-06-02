@@ -41,16 +41,29 @@ wire it to your Google account and deploy it. Do them in order.
    This is **public** by design — it is safe in client code.
 
 ## 5. Create the Apps Script project and add the code
-1. Go to <https://script.google.com> → **New project**.
-2. Recreate the files from this repo's `apps-script/` folder (same names):
-   `Config.gs`, `Auth.gs`, `Code.gs`, `SheetProvider.gs`, `GA4Provider.gs`,
-   `ValueLayer.gs`, `Modules.gs`.
-   - Easiest: install **clasp** and `clasp push` the folder, **or** paste each
-     file's contents into a matching script file in the editor.
-3. **Project Settings → "Show appsscript.json manifest in editor"** → ON, then
-   replace the manifest with this repo's `apps-script/appsscript.json`
-   (it declares the scopes + web-app access). Confirm `executeAs: USER_DEPLOYING`
-   and `access: ANYONE_ANONYMOUS`.
+
+**Recommended: push from the terminal with clasp** (no manual copy-paste).
+See [§ Pushing with clasp](#pushing-with-clasp) below for the full one-time
+setup. In short:
+```bash
+npm install -g @google/clasp
+clasp login                                   # opens your browser
+# Create a standalone project (one time):
+clasp create --type standalone --title "Hancocks London Dashboard"
+# clasp writes a .clasp.json — set "rootDir" to "apps-script" (see example file),
+# then push everything in apps-script/ (the 7 .gs files + appsscript.json):
+clasp push -f
+clasp open                                     # opens the project in the editor
+```
+
+**Manual alternative:** at <https://script.google.com> → **New project**,
+recreate each file from `apps-script/` (same names: `Config.gs`, `Auth.gs`,
+`Code.gs`, `SheetProvider.gs`, `GA4Provider.gs`, `ValueLayer.gs`, `Modules.gs`),
+then **Project Settings → "Show appsscript.json manifest in editor" → ON** and
+paste in `apps-script/appsscript.json`.
+
+Either way, confirm the manifest has `executeAs: USER_DEPLOYING` and
+`access: ANYONE_ANONYMOUS` and the three OAuth scopes.
 
 ## 6. Set Script Properties (the server-side secrets)
 **Project Settings → Script Properties → Add script property** (4 entries):
@@ -97,6 +110,42 @@ Commit & push. GitHub Pages serves it at
 ## Re-deploying after code changes
 Apps Script → **Deploy → Manage deployments → (edit) → New version**. The
 `/exec` URL stays the same, so the front-end needs no change.
+
+## Pushing with clasp
+
+[clasp](https://github.com/google/clasp) lets you push the `apps-script/` files
+straight from this repo instead of pasting into the editor.
+
+**One-time setup**
+1. **Install:** `npm install -g @google/clasp`
+2. **Enable the Apps Script API** for your account (once):
+   <https://script.google.com/home/usersettings> → turn **Google Apps Script
+   API** ON.
+3. **Log in:** `clasp login` (opens a browser; authorises clasp on your account).
+4. **Get a `.clasp.json`** in the repo root — two ways:
+   - **New project:** `clasp create --type standalone --title "Hancocks London Dashboard"`,
+     then edit the generated `.clasp.json` so it reads:
+     ```json
+     { "scriptId": "…the id clasp just created…", "rootDir": "apps-script" }
+     ```
+   - **Existing project (made in the editor):** copy `.clasp.json.example` to
+     `.clasp.json` and paste your **Script ID** (Apps Script → Project Settings
+     → IDs → Script ID).
+
+   `.clasp.json` is git-ignored on purpose (this repo is public and it carries
+   the script id); `.clasp.json.example` is the committed template.
+
+**Everyday use**
+```bash
+clasp push -f      # push apps-script/ to the project (overwrites server copy)
+clasp open         # open the project in the browser
+```
+`rootDir: "apps-script"` means clasp pushes the 7 `.gs` files **and**
+`appsscript.json` from that folder — nothing else. After pushing code changes
+you still need to cut a **new deployment version** (SETUP step "Re-deploying").
+
+> clasp pushes source only. It cannot create the OAuth client, set Script
+> Properties, or click "Deploy" for you — those stay manual (steps 3–7).
 
 ## Phase 2 note (not now)
 Site-search **terms** only return from GA4 if `search_term` is registered as a
