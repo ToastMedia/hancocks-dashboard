@@ -495,6 +495,10 @@
       </div>
     </div>
 
+    <!-- AI Referral Detail (shown only when AI assistants send traffic) -->
+    <div class="section-label" id="aiDetailLabel" style="margin-top:32px;display:none">AI Referral Detail &nbsp;<span class="pill">GA4</span></div>
+    <div id="aiDetail"></div>
+
     <!-- Traffic deep-dive (GA4) -->
     <div class="section-label" style="margin-top:32px">Traffic Detail &nbsp;<span class="pill">GA4</span></div>
     <div class="card" style="margin-bottom:16px">
@@ -915,6 +919,9 @@ function renderTraffic(d) {
   // Notable / emerging sources callout (AI referrers etc.)
   renderNotableSources(d);
 
+  // AI Referral deep-dive (landing pages AIs cite, engagement, trend)
+  renderAiDetail(d.ga4.aiReferral);
+
   // Geographic Reach (promoted section)
   renderGeoReach(d.ga4.geoSessions);
 
@@ -968,6 +975,60 @@ function renderNotableSources(d) {
     '<div class="notable-name">' + r.name + '</div>' +
     '<div class="notable-val">' + fmtNum(r.sessions) + (usingSessions ? ' sessions' : ' conversions') + ' this period</div></div>'
   ).join('');
+}
+
+/* ----------------------- AI Referral deep-dive --------------------------- */
+function aiSourceName(src) {
+  const hit = AI_REFERRERS.find(ai => ai.match.test(src || ''));
+  return hit ? hit.name : (src || '(unknown)');
+}
+
+function renderAiDetail(result) {
+  const box = document.getElementById('aiDetail');
+  const label = document.getElementById('aiDetailLabel');
+  const hide = () => { box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none'; };
+  if (!result || !result.ok) return hide();
+  const v = result.value || {};
+  const totals = v.totals || { sessions: 0 };
+  const landing = v.landingPages || [];
+  // Nothing from AI this window — keep the section out of the way entirely.
+  if ((!totals.sessions || totals.sessions <= 0) && !landing.length) return hide();
+  box.style.display = ''; label.style.display = '';
+
+  const bySource = v.bySource || [];
+  const trend = v.trend || [];
+  const nvr = v.newVsReturning || [];
+  const nvrTotal = nvr.reduce((a, b) => a + (b.users || 0), 0) || 0;
+  const srcLine = bySource.map(s => aiSourceName(s.source) + ' ' + fmtNum(s.sessions)).join(' · ');
+  const nvrLine = nvrTotal ? nvr.map(x => Math.round(x.users / nvrTotal * 100) + '% ' + x.type.toLowerCase()).join(' · ') + ' visitors' : '';
+
+  let html = '<div class="hero-row">';
+  html += '<div class="momentum-card">' +
+    '<div class="momentum-label">AI Assistant Sessions</div>' +
+    '<div class="momentum-value">' + fmtNum(totals.sessions) + '</div>' +
+    (srcLine ? '<div class="momentum-meta"><span class="scorecard-period">' + srcLine + '</span></div>' : '') +
+    '<div class="momentum-spark">' + sparklineSvg(trend.map(p => p.sessions)) + '</div>' +
+    '<div class="metric-tiles" style="margin-top:16px">' +
+      '<div class="metric-tile"><div class="metric-tile-label">Avg session</div><div class="metric-tile-val">' + fmtDuration(totals.avgDurationSec) + '</div></div>' +
+      '<div class="metric-tile"><div class="metric-tile-label">Pages / session</div><div class="metric-tile-val">' + (totals.pagesPerSession || 0).toFixed(1) + '</div></div>' +
+    '</div>' +
+    (nvrLine ? '<div class="caption-note">' + nvrLine + '</div>' : '') +
+    '</div>';
+  html += '<div class="card"><div class="card-title">Pages AI Cites Most</div>' +
+    '<div class="card-subtitle">The closest proxy for what people asked — AIs never pass the prompt, only the page they linked to</div>' +
+    '<div id="aiLandingBox"></div></div>';
+  html += '</div>';
+  box.innerHTML = html;
+
+  const lb = document.getElementById('aiLandingBox');
+  if (!landing.length) {
+    lb.innerHTML = '<div class="ga4-unavailable">No landing-page data for AI traffic this window.</div>';
+  } else {
+    const max = Math.max.apply(null, landing.map(r => r.sessions));
+    lb.innerHTML = '<table class="data-table"><tbody>' + landing.map(r =>
+      '<tr><td>' + r.page + barCell(r.sessions, max) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>'
+    ).join('') + '</tbody></table>';
+  }
 }
 
 /* -------------------------- Geographic Reach ----------------------------- */
