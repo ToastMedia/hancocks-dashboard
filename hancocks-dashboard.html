@@ -236,12 +236,14 @@
     text-align: left; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--text-muted); padding: 8px 0; border-bottom: 1px solid var(--border); font-weight: 400;
   }
-  .data-table td { padding: 9px 0; border-bottom: 1px solid rgba(42,42,42,0.5); color: var(--text); font-size: 13px; }
+  .data-table td { padding: 9px 0; border-bottom: 1px solid rgba(42,42,42,0.5); color: var(--text); font-size: 13px; overflow-wrap: anywhere; }
   .data-table tr:last-child td { border-bottom: none; }
   .data-table td.num { text-align: right; font-family: var(--font-display); font-size: 16px; font-weight: 300; color: var(--gold-light); }
   .data-table td .bar-bg { width: 100%; height: 3px; background: var(--border); margin-top: 4px; }
   .data-table td .bar-fill { height: 3px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
   .muted { color: var(--text-dim); }
+  /* Long page paths / source-mediums: full text on desktop, clean ellipsis on mobile. */
+  .truncate-mobile { display: block; padding-right: 10px; }
 
   /* Funnel */
   .funnel { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
@@ -329,6 +331,23 @@
     .scorecards-grid { grid-template-columns: repeat(2, 1fr); }
     .header-left h1 { font-size: 28px; }
     .sowhat-text { font-size: 18px; }
+    /* Keep URL/path rows to a single tidy line so the count stays visible. */
+    .truncate-mobile {
+      max-width: calc(100vw - 150px);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+  }
+
+  /* Phones: keep the big display numbers from crowding the narrow viewport. */
+  @media (max-width: 480px) {
+    .header, .main { padding-left: 14px; padding-right: 14px; }
+    .header-left h1 { font-size: 24px; }
+    .momentum-value { font-size: 48px; }
+    .scorecard-value { font-size: 26px; }
+    .funnel-stage-val { font-size: 32px; }
+    .sowhat-text { font-size: 17px; }
+    .data-table td.num { font-size: 14px; }
+    .truncate-mobile { max-width: calc(100vw - 120px); }
   }
 </style>
 </head>
@@ -729,6 +748,8 @@ function hideError() { document.getElementById('errorBanner').classList.remove('
 
 /* ------------------------------ Formatting ------------------------------- */
 function fmtNum(n) { return (Number(n) || 0).toLocaleString('en-GB'); }
+// Escape a string for safe use inside a double-quoted HTML attribute (e.g. title).
+function escapeAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function fmtChange(changePct) {
   if (changePct === null || changePct === undefined) return { text: 'New', cls: 'neutral', arrow: '' };
   if (changePct === 0) return { text: '0%', cls: 'neutral', arrow: '' };
@@ -1026,7 +1047,7 @@ function renderAiDetail(result) {
   } else {
     const max = Math.max.apply(null, landing.map(r => r.sessions));
     lb.innerHTML = '<table class="data-table"><tbody>' + landing.map(r =>
-      '<tr><td>' + r.page + barCell(r.sessions, max) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>'
+      '<tr><td><span class="truncate-mobile" title="' + escapeAttr(r.page) + '">' + r.page + '</span>' + barCell(r.sessions, max) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>'
     ).join('') + '</tbody></table>';
   }
 }
@@ -1141,7 +1162,8 @@ function renderGa4Table(bodyId, boxId, result, mapFn, field) {
   const max = Math.max.apply(null, rows.map(r => mapFn(r)[1]));
   box.innerHTML = '<table class="data-table"><tbody>' + rows.map(r => {
     const [label, val] = mapFn(r);
-    return '<tr><td>' + (label || '(not set)') + barCell(val, max) + '</td><td class="num">' + fmtNum(val) + '</td></tr>';
+    const safe = label || '(not set)';
+    return '<tr><td><span class="truncate-mobile" title="' + escapeAttr(safe) + '">' + safe + '</span>' + barCell(val, max) + '</td><td class="num">' + fmtNum(val) + '</td></tr>';
   }).join('') + '</tbody></table>';
 }
 
