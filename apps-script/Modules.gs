@@ -234,7 +234,8 @@ function buildTrafficModule_(params) {
       sessionsTrend: sessionsTrend,
       sourceMediums: sourceMediums,
       geoSessions: geoSessions,
-      deviceSessions: deviceSessions
+      deviceSessions: deviceSessions,
+      aiReferral: tryGa4_(function () { return ga4AiReferralDetail_(w); })
     },
     sourceEfficiency: sourceEfficiency
   };

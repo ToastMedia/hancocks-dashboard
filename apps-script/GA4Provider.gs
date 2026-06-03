@@ -206,3 +206,88 @@ function ga4TopCitiesWithCountry_(windowDays, limit) {
     return { name: r.dims[0] || '(not set)', country: r.dims[1] || '', sessions: r.mets[0] };
   });
 }
+
+/* ----------------------- AI referral deep-dive --------------------------- */
+
+/**
+ * Session sources that represent AI assistants. NOTE: the AI never passes the
+ * user's actual prompt — only its domain — so the closest proxy for "what they
+ * asked" is the landing page the AI chose to cite (see ga4AiReferralDetail_).
+ */
+var AI_SOURCES = [
+  'chatgpt.com', 'chat.openai.com', 'openai.com',
+  'perplexity.ai', 'www.perplexity.ai',
+  'gemini.google.com', 'bard.google.com',
+  'copilot.microsoft.com', 'claude.ai'
+];
+
+/** A GA4 dimensionFilter limiting a report to AI-assistant sources. */
+function ga4AiSourceFilter_() {
+  return { filter: { fieldName: 'sessionSource', inListFilter: { values: AI_SOURCES, caseSensitive: false } } };
+}
+
+/**
+ * Everything we can learn about AI-assistant traffic from GA4. The headline
+ * insight is `landingPages` — the pages AIs cite, the best available proxy for
+ * the underlying questions (GA4 never receives the prompt itself).
+ * -> { totals, bySource, landingPages, trend, newVsReturning }
+ */
+function ga4AiReferralDetail_(windowDays) {
+  var range = ga4DateRange_(windowDays);
+  var filter = ga4AiSourceFilter_();
+
+  // Site-wide AI totals: sessions, avg duration, pages/session.
+  var totalsRep = ga4RunReport_({
+    dateRanges: [range], dimensionFilter: filter,
+    metrics: [{ name: 'sessions' }, { name: 'averageSessionDuration' }, { name: 'screenPageViewsPerSession' }]
+  });
+  var tm = ga4Rows_(totalsRep);
+  var t = tm.length ? tm[0].mets : [0, 0, 0];
+  var totals = { sessions: t[0], avgDurationSec: t[1], pagesPerSession: t[2] };
+
+  // Per-assistant breakdown.
+  var bySourceRep = ga4RunReport_({
+    dateRanges: [range], dimensionFilter: filter,
+    dimensions: [{ name: 'sessionSource' }], metrics: [{ name: 'sessions' }],
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 25
+  });
+  var bySource = ga4Rows_(bySourceRep).map(function (r) {
+    return { source: r.dims[0] || '(unknown)', sessions: r.mets[0] };
+  });
+
+  // Pages AIs cite — the proxy for "what people asked".
+  var landingRep = ga4RunReport_({
+    dateRanges: [range], dimensionFilter: filter,
+    dimensions: [{ name: 'landingPagePlusQueryString' }], metrics: [{ name: 'sessions' }],
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 12
+  });
+  var landingPages = ga4Rows_(landingRep).map(function (r) {
+    return { page: r.dims[0] || '(not set)', sessions: r.mets[0] };
+  });
+
+  // Daily AI sessions trend.
+  var trendRep = ga4RunReport_({
+    dateRanges: [range], dimensionFilter: filter,
+    dimensions: [{ name: 'date' }], metrics: [{ name: 'sessions' }],
+    orderBys: [{ dimension: { dimensionName: 'date' } }], limit: 400
+  });
+  var trend = ga4Rows_(trendRep).map(function (r) {
+    var d = String(r.dims[0] || '');
+    var iso = d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8) : d;
+    return { date: iso, sessions: r.mets[0] };
+  });
+
+  // New vs returning for AI visitors (discovery vs loyalty).
+  var nvrRep = ga4RunReport_({
+    dateRanges: [range], dimensionFilter: filter,
+    dimensions: [{ name: 'newVsReturning' }], metrics: [{ name: 'activeUsers' }]
+  });
+  var newVsReturning = ga4Rows_(nvrRep)
+    .filter(function (r) { return r.dims[0]; })
+    .map(function (r) {
+      var label = r.dims[0] === 'new' ? 'New' : r.dims[0] === 'returning' ? 'Returning' : r.dims[0];
+      return { type: label, users: r.mets[0] };
+    });
+
+  return { totals: totals, bySource: bySource, landingPages: landingPages, trend: trend, newVsReturning: newVsReturning };
+}
