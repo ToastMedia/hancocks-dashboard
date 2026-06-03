@@ -446,6 +446,31 @@
       </div>
     </div>
 
+    <!-- Traffic deep-dive (GA4) -->
+    <div class="section-label" style="margin-top:32px">Traffic Detail &nbsp;<span class="pill">GA4</span></div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Sessions Over Time</div>
+      <div class="card-subtitle">Daily sessions across the selected window</div>
+      <div id="sessionsTrendBox"><div class="chart-wrap"><canvas id="sessionsTrendChart"></canvas></div></div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Top Sources &amp; Mediums</div>
+        <div class="card-subtitle">Granular acquisition</div>
+        <div id="sourceMediumBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sessions by Location</div>
+        <div class="card-subtitle">Country &amp; city</div>
+        <div id="geoSessionsBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sessions by Device</div>
+        <div class="card-subtitle">Device category</div>
+        <div id="deviceSessionsBox"></div>
+      </div>
+    </div>
+
     <!-- Module 3: Audience & Engagement -->
     <div class="section-label" style="margin-top:32px">Audience &amp; Engagement</div>
     <div class="grid-3">
@@ -826,6 +851,48 @@ function renderTraffic(d) {
     html += campaigns.map(c => '<tr><td>' + c.label + barCell(c.conversions, cMax) + '</td><td class="num">' + fmtNum(c.conversions) + '</td></tr>').join('');
   }
   document.getElementById('sourcesBody').innerHTML = html || '<tr><td colspan="2" class="muted">No data</td></tr>';
+
+  // Traffic deep-dive (GA4)
+  renderSessionsTrend(d.ga4.sessionsTrend);
+  renderGa4Table(null, 'sourceMediumBox', d.ga4.sourceMediums, r => [r.source + ' / ' + r.medium, r.sessions]);
+  renderGeoSessions('geoSessionsBox', d.ga4.geoSessions);
+  renderGa4Table(null, 'deviceSessionsBox', d.ga4.deviceSessions, r => [r.name, r.sessions]);
+}
+
+function renderSessionsTrend(result) {
+  const box = document.getElementById('sessionsTrendBox');
+  if (charts.sessionsTrend) { charts.sessionsTrend.destroy(); charts.sessionsTrend = null; }
+  if (!result || !result.ok) { box.innerHTML = ga4Unavailable(result && result.error); return; }
+  const rows = result.value || [];
+  if (!rows.length) { box.innerHTML = '<div class="ga4-unavailable">No session data for this window.</div>'; return; }
+  box.innerHTML = '<div class="chart-wrap"><canvas id="sessionsTrendChart"></canvas></div>';
+  const labels = rows.map(r => { const dt = new Date(r.date + 'T00:00:00'); return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); });
+  charts.sessionsTrend = new Chart(document.getElementById('sessionsTrendChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Sessions', data: rows.map(r => r.sessions), borderColor: '#c9a84c', backgroundColor: 'rgba(201,168,76,0.08)', borderWidth: 1.5, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#181818', borderColor: '#2a2a2a', borderWidth: 1, titleColor: '#7a7570', bodyColor: '#f0ece4', padding: 12 } },
+      scales: { x: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 }, maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 } } } }
+    }
+  });
+}
+
+function renderGeoSessions(boxId, result) {
+  const box = document.getElementById(boxId);
+  if (!result || !result.ok) { box.innerHTML = ga4Unavailable(result && result.error); return; }
+  const countries = (result.value && result.value.countries) || [];
+  const cities = (result.value && result.value.cities) || [];
+  if (!countries.length && !cities.length) { box.innerHTML = '<div class="ga4-unavailable">No location data for this window.</div>'; return; }
+  const cMax = Math.max.apply(null, countries.map(r => r.sessions).concat([0]));
+  let html = countries.map(r => '<tr><td>' + r.name + barCell(r.sessions, cMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>').join('');
+  if (cities.length) {
+    html += '<tr><td colspan="2" style="padding-top:14px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Cities</td></tr>';
+    const ctMax = Math.max.apply(null, cities.map(r => r.sessions).concat([0]));
+    html += cities.map(r => '<tr><td>' + r.name + barCell(r.sessions, ctMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>').join('');
+  }
+  box.innerHTML = '<table class="data-table"><tbody>' + html + '</tbody></table>';
 }
 
 function renderGa4Table(bodyId, boxId, result, mapFn, field) {

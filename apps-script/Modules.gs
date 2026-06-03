@@ -188,6 +188,14 @@ function buildTrafficModule_(params) {
   var topLandingPages = tryGa4_(function () { return ga4TopLandingPages_(w, 10); });
   var engagement = tryGa4_(function () { return ga4EngagementTotals_(w); });
 
+  // GA4 traffic deep-dive (Phase 2).
+  var sessionsTrend = tryGa4_(function () { return ga4SessionsTrend_(w); });
+  var sourceMediums = tryGa4_(function () { return ga4TopSourceMediums_(w, 10); });
+  var geoSessions = tryGa4_(function () {
+    return { countries: ga4SessionsByDimension_(w, 'country', 8), cities: ga4SessionsByDimension_(w, 'city', 8) };
+  });
+  var deviceSessions = tryGa4_(function () { return ga4SessionsByDimension_(w, 'deviceCategory', 6); });
+
   // Source Efficiency (value layer): enquiries+appointments per 100 sessions,
   // joining the sheet's per-source/medium conversions to GA4 sessions.
   var sourceEfficiency = tryGa4_(function () {
@@ -222,7 +230,11 @@ function buildTrafficModule_(params) {
       sessionsByChannel: sessionsByChannel,
       newVsReturning: newVsReturning,
       topLandingPages: topLandingPages,
-      engagement: engagement
+      engagement: engagement,
+      sessionsTrend: sessionsTrend,
+      sourceMediums: sourceMediums,
+      geoSessions: geoSessions,
+      deviceSessions: deviceSessions
     },
     sourceEfficiency: sourceEfficiency
   };

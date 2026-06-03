@@ -143,3 +143,49 @@ function ga4SessionsBySourceMediumMap_(windowDays) {
   });
   return map;
 }
+
+/* --------------------- Traffic deep-dive (Phase 2) ----------------------- */
+
+/** Daily sessions across the window, ascending by date. -> [{ date:'YYYY-MM-DD', sessions }] */
+function ga4SessionsTrend_(windowDays) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'date' }],
+    metrics: [{ name: 'sessions' }],
+    orderBys: [{ dimension: { dimensionName: 'date' } }],
+    limit: 400
+  });
+  return ga4Rows_(rep).map(function (r) {
+    var d = String(r.dims[0] || '');           // GA4 returns YYYYMMDD
+    var iso = d.length === 8 ? d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8) : d;
+    return { date: iso, sessions: r.mets[0] };
+  });
+}
+
+/** Top source/medium pairs by sessions. -> [{ source, medium, sessions }] */
+function ga4TopSourceMediums_(windowDays, limit) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'sessionSource' }, { name: 'sessionMedium' }],
+    metrics: [{ name: 'sessions' }],
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+    limit: limit || 10
+  });
+  return ga4Rows_(rep).map(function (r) {
+    return { source: r.dims[0] || '(direct)', medium: r.dims[1] || '(none)', sessions: r.mets[0] };
+  });
+}
+
+/** Sessions by a single dimension (country, city, deviceCategory, …). -> [{ name, sessions }] */
+function ga4SessionsByDimension_(windowDays, dimName, limit) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: dimName }],
+    metrics: [{ name: 'sessions' }],
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+    limit: limit || 10
+  });
+  return ga4Rows_(rep).map(function (r) {
+    return { name: r.dims[0] || '(not set)', sessions: r.mets[0] };
+  });
+}
