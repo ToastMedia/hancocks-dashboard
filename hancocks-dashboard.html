@@ -495,6 +495,10 @@
       </div>
     </div>
 
+    <!-- Local Visibility: Google Business Profile -->
+    <div class="section-label" style="margin-top:32px">Local Visibility &nbsp;<span class="pill">Google Business Profile</span></div>
+    <div id="localVisibility"></div>
+
     <div class="footer">
       <div>Secure data via authenticated Apps Script &nbsp;·&nbsp; GA4 Property <span>465868062</span></div>
       <div>Built by <span>Toast Media</span></div>
@@ -628,7 +632,8 @@ async function loadAll() {
     ['conversions', renderConversions],
     ['business', renderBusiness],
     ['traffic', renderTraffic],
-    ['audience', renderAudience]
+    ['audience', renderAudience],
+    ['localvisibility', renderLocalVisibility]
   ];
   const results = await Promise.allSettled(modules.map(m => callModule(m[0])));
 
@@ -955,6 +960,81 @@ function renderDeviceChart(devices) {
   document.getElementById('deviceLegend').innerHTML = labels.map((l, i) =>
     '<div class="device-legend-item"><div class="device-legend-left"><div class="device-dot" style="background:' + colors[i % colors.length] + '"></div><span>' + l + '</span></div>' +
     '<div class="device-legend-val">' + fmtNum(values[i]) + '</div></div>').join('');
+}
+
+/* ===================== Local Visibility (GBP) render ===================== */
+function renderLocalVisibility(d) {
+  const box = document.getElementById('localVisibility');
+  if (!d || d.configured === false) {
+    box.innerHTML = '<div class="card"><div class="ga4-unavailable">Google Business Profile isn\'t connected yet. Once API access is approved and a location is set, local impressions, calls, directions and search keywords appear here.</div></div>';
+    return;
+  }
+  if (!d.daily || !d.daily.ok || !d.derived) {
+    box.innerHTML = '<div class="card">' + ga4Unavailable(d.daily && d.daily.error) + '</div>';
+    return;
+  }
+  const v = d.derived, a = v.actions;
+  const kw = d.keywords;
+
+  let html = '';
+  // Row 1: impressions hero + actions tiles
+  html += '<div class="hero-row">';
+  html += '<div class="momentum-card">' +
+    '<div class="momentum-label">Profile Impressions</div>' +
+    '<div class="momentum-value">' + fmtNum(v.impressionsTotal) + '</div>' +
+    '<div class="momentum-meta"><span class="scorecard-period">Search ' + fmtNum(v.searchImpressions) + ' · Maps ' + fmtNum(v.mapsImpressions) + '</span></div>' +
+    '<div class="momentum-meta" style="margin-top:6px"><span class="scorecard-period">Desktop ' + fmtNum(v.desktopImpressions) + ' · Mobile ' + fmtNum(v.mobileImpressions) + '</span></div>' +
+    '</div>';
+  html += '<div class="card"><div class="card-title">Customer Actions</div>' +
+    '<div class="card-subtitle">What people did from the profile</div>' +
+    '<div class="metric-tiles">' +
+    gbpTile('Calls', a.calls) + gbpTile('Website clicks', a.website) +
+    gbpTile('Directions', a.directions) + gbpTile('Bookings', a.bookings) +
+    '</div></div>';
+  html += '</div>';
+
+  // Row 2: impressions trend + top search keywords
+  html += '<div class="grid-2">';
+  html += '<div class="card"><div class="card-title">Impressions Over Time</div>' +
+    '<div class="card-subtitle">Daily profile impressions</div>' +
+    '<div class="chart-wrap"><canvas id="gbpImpressionsChart"></canvas></div></div>';
+  html += '<div class="card"><div class="card-title">Top Search Keywords</div>' +
+    '<div class="card-subtitle">How people found the profile</div>' +
+    '<div id="gbpKeywordsBox"></div></div>';
+  html += '</div>';
+
+  box.innerHTML = html;
+
+  // Impressions chart
+  if (charts.gbpImpressions) { charts.gbpImpressions.destroy(); charts.gbpImpressions = null; }
+  const series = v.impressionsSeries || [];
+  if (series.length) {
+    const labels = series.map(p => { const dt = new Date(p.date + 'T00:00:00'); return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); });
+    charts.gbpImpressions = new Chart(document.getElementById('gbpImpressionsChart'), {
+      type: 'line',
+      data: { labels, datasets: [{ data: series.map(p => p.value), borderColor: '#c9a84c', backgroundColor: 'rgba(201,168,76,0.08)', borderWidth: 1.5, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#181818', borderColor: '#2a2a2a', borderWidth: 1, titleColor: '#7a7570', bodyColor: '#f0ece4', padding: 12 } },
+        scales: { x: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 }, maxTicksLimit: 8 } },
+          y: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 } } } }
+      }
+    });
+  }
+
+  // Keywords
+  const kwBox = document.getElementById('gbpKeywordsBox');
+  if (!kw || !kw.ok) { kwBox.innerHTML = ga4Unavailable(kw && kw.error); return; }
+  const rows = kw.value || [];
+  if (!rows.length) { kwBox.innerHTML = '<div class="ga4-unavailable">No search keyword data for this window.</div>'; return; }
+  const max = Math.max.apply(null, rows.map(r => r.value));
+  kwBox.innerHTML = '<table class="data-table"><tbody>' + rows.map(r =>
+    '<tr><td>' + r.keyword + (r.approx ? ' <span class="muted" style="font-size:10px">approx</span>' : '') + barCell(r.value, max) + '</td>' +
+    '<td class="num">' + fmtNum(r.value) + '</td></tr>').join('') + '</tbody></table>';
+}
+
+function gbpTile(label, val) {
+  return '<div class="metric-tile"><div class="metric-tile-label">' + label + '</div><div class="metric-tile-val">' + fmtNum(val) + '</div></div>';
 }
 
 /* ------------------------------ Date toggle ------------------------------ */

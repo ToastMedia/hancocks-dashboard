@@ -147,6 +147,30 @@ you still need to cut a **new deployment version** (SETUP step "Re-deploying").
 > clasp pushes source only. It cannot create the OAuth client, set Script
 > Properties, or click "Deploy" for you — those stay manual (steps 3–7).
 
+## Google Business Profile (Local Visibility) — Phase 2
+
+The `GBPProvider` + Local Visibility module are built; lighting them up needs:
+
+1. **Request API access (the long pole — do this first; approval can take a few
+   business days).** Submit the Business Profile API access form for Cloud
+   project **`217450833455`**: <https://support.google.com/business/contact/api_default>
+2. **Enable these APIs** in `hancocks-reporting-dashboard`:
+   - Business Profile Performance API
+   - My Business Account Management API
+   - My Business Business Information API
+   *(They enable immediately, but calls stay `PERMISSION_DENIED` until step 1 is
+   approved — expected.)*
+3. **Authorise the new scope.** The manifest now declares `business.manage`, so
+   after `clasp push -f` run any function in the editor (e.g. `doGet`) and
+   re-Allow the permissions, then cut a **new deployment version**.
+4. **Find the location id.** In the editor, Run ▶ **`gbpListLocations`**, open
+   **Executions / Logs**, and copy the numeric id from a name like
+   `locations/1234567890`.
+5. **Set `GBP_LOCATION_ID`** (that number) in Script Properties.
+6. Refresh the dashboard → the Local Visibility section populates (impressions
+   search-vs-maps, calls, directions, website clicks, bookings, top search
+   keywords). Note: GBP data lags a few days, so the latest 2-3 days read low.
+
 ## Phase 2 note (not now)
 Site-search **terms** only return from GA4 if `search_term` is registered as a
 **custom dimension** (Admin → Custom definitions) — a ~5-min step before that

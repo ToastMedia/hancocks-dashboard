@@ -81,5 +81,6 @@ var MODULES = {
   conversions: function (params) { return buildConversionsModule_(params); }, // Module 1 (sheet)
   business:    function (params) { return buildBusinessModule_(params); },    // Module 5 (sheet)
   audience:    function (params) { return buildAudienceModule_(params); },    // Module 3 slice (sheet) + GA4
-  traffic:     function (params) { return buildTrafficModule_(params); }      // Module 2 slice (sheet) + GA4
+  traffic:     function (params) { return buildTrafficModule_(params); },     // Module 2 slice (sheet) + GA4
+  localvisibility: function (params) { return buildLocalVisibilityModule_(params); } // Google Business Profile
 };

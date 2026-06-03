@@ -240,6 +240,62 @@ function buildTrafficModule_(params) {
   };
 }
 
+/* ===================== Local Visibility: Google Business Profile ========= */
+
+/** Run a GBP-backed function; never let it break the whole module. */
+function tryGBP_(fn) {
+  try {
+    return { ok: true, value: fn() };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+}
+
+function buildLocalVisibilityModule_(params) {
+  var w = params.window;
+
+  // Not configured yet? Return a clean "connect" state, no error noise.
+  var configured = !!PropertiesService.getScriptProperties().getProperty('GBP_LOCATION_ID');
+  if (!configured) {
+    return { source: 'gbp', configured: false };
+  }
+
+  var daily = tryGBP_(function () { return gbpDailyMetrics_(w); });
+  var keywords = tryGBP_(function () { return gbpSearchKeywords_(Math.max(1, Math.ceil(w / 30)), 12); });
+
+  var derived = null;
+  if (daily.ok) {
+    var t = daily.value.totals;
+    function sum(keys) { return keys.reduce(function (a, k) { return a + (t[k] || 0); }, 0); }
+    derived = {
+      impressionsTotal: sum(GBP_IMPRESSION_METRICS),
+      searchImpressions: sum(['BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH']),
+      mapsImpressions: sum(['BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'BUSINESS_IMPRESSIONS_MOBILE_MAPS']),
+      desktopImpressions: sum(['BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', 'BUSINESS_IMPRESSIONS_DESKTOP_MAPS']),
+      mobileImpressions: sum(['BUSINESS_IMPRESSIONS_MOBILE_SEARCH', 'BUSINESS_IMPRESSIONS_MOBILE_MAPS']),
+      actions: {
+        calls: t['CALL_CLICKS'] || 0,
+        website: t['WEBSITE_CLICKS'] || 0,
+        directions: t['BUSINESS_DIRECTION_REQUESTS'] || 0,
+        messages: t['BUSINESS_CONVERSATIONS'] || 0,
+        bookings: t['BUSINESS_BOOKINGS'] || 0
+      },
+      impressionsSeries: combineSeriesByDate_(daily.value.series, GBP_IMPRESSION_METRICS)
+    };
+  }
+
+  return { source: 'gbp', configured: true, derived: derived, daily: daily, keywords: keywords };
+}
+
+/** Sum several GBP daily series into one [{date,value}] ordered by date. */
+function combineSeriesByDate_(series, metricKeys) {
+  var map = {};
+  metricKeys.forEach(function (k) {
+    (series[k] || []).forEach(function (p) { map[p.date] = (map[p.date] || 0) + p.value; });
+  });
+  return Object.keys(map).sort().map(function (d) { return { date: d, value: map[d] }; });
+}
+
 /* ------------------------------- helpers --------------------------------- */
 
 /** Aggregate sheet rows by a dimension column, summing two metric columns. */
