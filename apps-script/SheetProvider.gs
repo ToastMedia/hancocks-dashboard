@@ -67,9 +67,14 @@ function getSheetResilient_(tabName) {
   return null;
 }
 
-/** Lowercase, collapse all whitespace (incl. non-breaking) to single spaces, trim. */
+/**
+ * Normalise a tab name for tolerant matching: lowercase, then collapse every
+ * run of non-alphanumeric characters (emoji icons, punctuation, ordinary and
+ * non-breaking spaces) to a single space, and trim. So "📈 Daily Trend" and
+ * "Daily Trend" both reduce to "daily trend".
+ */
 function normalizeTabName_(s) {
-  return String(s).replace(/\s+/g, ' ').trim().toLowerCase();
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 /* ----------------------- typed accessors per tab ------------------------- */
