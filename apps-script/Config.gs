@@ -82,5 +82,6 @@ var MODULES = {
   business:    function (params) { return buildBusinessModule_(params); },    // Module 5 (sheet)
   audience:    function (params) { return buildAudienceModule_(params); },    // Module 3 slice (sheet) + GA4
   traffic:     function (params) { return buildTrafficModule_(params); },     // Module 2 slice (sheet) + GA4
-  localvisibility: function (params) { return buildLocalVisibilityModule_(params); } // Google Business Profile
+  localvisibility: function (params) { return buildLocalVisibilityModule_(params); }, // Google Business Profile
+  instagram:   function (params) { return buildInstagramModule_(params); }    // Instagram (Meta Graph API)
 };

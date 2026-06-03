@@ -296,6 +296,33 @@ function combineSeriesByDate_(series, metricKeys) {
   return Object.keys(map).sort().map(function (d) { return { date: d, value: map[d] }; });
 }
 
+/* ============================= Instagram (Meta) ========================== */
+
+/** Run a Meta-backed function; never let it break the whole module. */
+function tryMeta_(fn) {
+  try {
+    return { ok: true, value: fn() };
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+}
+
+function buildInstagramModule_(params) {
+  var w = params.window;
+  var configured = !!PropertiesService.getScriptProperties().getProperty('IG_USER_ID');
+  if (!configured) {
+    return { source: 'instagram', configured: false };
+  }
+  return {
+    source: 'instagram',
+    configured: true,
+    profile: tryMeta_(function () { return metaProfile_(); }),
+    reach: tryMeta_(function () { return metaDaySeries_('reach', w); }),
+    followers: tryMeta_(function () { return metaDaySeries_('follower_count', w); }),
+    topMedia: tryMeta_(function () { return metaTopMedia_(8); })
+  };
+}
+
 /* ------------------------------- helpers --------------------------------- */
 
 /** Aggregate sheet rows by a dimension column, summing two metric columns. */

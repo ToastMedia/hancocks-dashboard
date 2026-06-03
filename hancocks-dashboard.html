@@ -499,6 +499,10 @@
     <div class="section-label" style="margin-top:32px">Local Visibility &nbsp;<span class="pill">Google Business Profile</span></div>
     <div id="localVisibility"></div>
 
+    <!-- Instagram -->
+    <div class="section-label" style="margin-top:32px">Instagram &nbsp;<span class="pill">Meta</span></div>
+    <div id="instagram"></div>
+
     <div class="footer">
       <div>Secure data via authenticated Apps Script &nbsp;·&nbsp; GA4 Property <span>465868062</span></div>
       <div>Built by <span>Toast Media</span></div>
@@ -633,7 +637,8 @@ async function loadAll() {
     ['business', renderBusiness],
     ['traffic', renderTraffic],
     ['audience', renderAudience],
-    ['localvisibility', renderLocalVisibility]
+    ['localvisibility', renderLocalVisibility],
+    ['instagram', renderInstagram]
   ];
   const results = await Promise.allSettled(modules.map(m => callModule(m[0])));
 
@@ -1035,6 +1040,67 @@ function renderLocalVisibility(d) {
 
 function gbpTile(label, val) {
   return '<div class="metric-tile"><div class="metric-tile-label">' + label + '</div><div class="metric-tile-val">' + fmtNum(val) + '</div></div>';
+}
+
+/* ========================= Instagram (Meta) render ====================== */
+function renderInstagram(d) {
+  const box = document.getElementById('instagram');
+  if (!d || d.configured === false) {
+    box.innerHTML = '<div class="card"><div class="ga4-unavailable">Instagram isn\'t connected yet. Once the Meta app + access token are in place, followers, reach, follower growth and top posts appear here.</div></div>';
+    return;
+  }
+  const prof = d.profile && d.profile.ok ? d.profile.value : null;
+  const reach = d.reach && d.reach.ok ? d.reach.value : [];
+  const followersSeries = d.followers && d.followers.ok ? d.followers.value : [];
+  const reachTotal = reach.reduce((a, p) => a + (p.value || 0), 0);
+
+  let html = '<div class="hero-row">';
+  html += '<div class="momentum-card">' +
+    '<div class="momentum-label">Followers' + (prof && prof.username ? ' · @' + prof.username : '') + '</div>' +
+    '<div class="momentum-value">' + (prof ? fmtNum(prof.followers) : '—') + '</div>' +
+    '<div class="momentum-meta"><span class="scorecard-period">' + (prof ? fmtNum(prof.mediaCount) + ' posts' : '') + ' · Reach ' + fmtNum(reachTotal) + ' this period</span></div>' +
+    '</div>';
+  html += '<div class="card"><div class="card-title">Follower Growth</div>' +
+    '<div class="card-subtitle">Daily followers across the window</div>' +
+    '<div id="igFollowerBox"><div class="chart-wrap"><canvas id="igFollowerChart"></canvas></div></div></div>';
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-title">Top Posts</div>' +
+    '<div class="card-subtitle">Recent posts ranked by engagement</div>' +
+    '<div id="igMediaBox"></div></div>';
+
+  box.innerHTML = html;
+
+  // Follower growth chart
+  if (charts.igFollower) { charts.igFollower.destroy(); charts.igFollower = null; }
+  if (followersSeries.length) {
+    const labels = followersSeries.map(p => { const dt = new Date(p.date + 'T00:00:00'); return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); });
+    charts.igFollower = new Chart(document.getElementById('igFollowerChart'), {
+      type: 'line',
+      data: { labels, datasets: [{ data: followersSeries.map(p => p.value), borderColor: '#c9a84c', backgroundColor: 'rgba(201,168,76,0.08)', borderWidth: 1.5, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#181818', borderColor: '#2a2a2a', borderWidth: 1, titleColor: '#7a7570', bodyColor: '#f0ece4', padding: 12 } },
+        scales: { x: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 }, maxTicksLimit: 8 } },
+          y: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 } } } }
+      }
+    });
+  } else {
+    document.getElementById('igFollowerBox').innerHTML = '<div class="ga4-unavailable">No follower-growth data for this window.</div>';
+  }
+
+  // Top media
+  const mediaBox = document.getElementById('igMediaBox');
+  if (!d.topMedia || !d.topMedia.ok) { mediaBox.innerHTML = ga4Unavailable(d.topMedia && d.topMedia.error); return; }
+  const media = d.topMedia.value || [];
+  if (!media.length) { mediaBox.innerHTML = '<div class="ga4-unavailable">No recent posts found.</div>'; return; }
+  mediaBox.innerHTML = '<table class="data-table"><thead><tr><th>Post</th><th style="text-align:right">Likes</th><th style="text-align:right">Comments</th><th style="text-align:right">Total</th></tr></thead><tbody>' +
+    media.map(m => {
+      const when = m.timestamp ? new Date(m.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const cap = (m.caption || '(no caption)') + (when ? ' <span class="muted" style="font-size:10px">· ' + when + '</span>' : '');
+      const link = m.permalink ? '<a href="' + m.permalink + '" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:none">' + cap + '</a>' : cap;
+      return '<tr><td>' + link + '</td><td class="num">' + fmtNum(m.likes) + '</td><td class="num">' + fmtNum(m.comments) + '</td><td class="num">' + fmtNum(m.engagement) + '</td></tr>';
+    }).join('') + '</tbody></table>';
 }
 
 /* ------------------------------ Date toggle ------------------------------ */

@@ -171,6 +171,34 @@ The `GBPProvider` + Local Visibility module are built; lighting them up needs:
    search-vs-maps, calls, directions, website clicks, bookings, top search
    keywords). Note: GBP data lags a few days, so the latest 2-3 days read low.
 
+## Instagram (Meta Graph API) — Phase 2
+
+The `MetaProvider` + Instagram module are built; connecting them needs a Meta
+app and a long-lived token (no Google scope involved).
+
+**Prerequisites:** the Hancocks Instagram is a **Business/Creator** account
+**linked to a Facebook Page** (already the case).
+
+1. **Create a Meta app** at <https://developers.facebook.com> → *My Apps →
+   Create app* → type **Business**. Link it to your Meta Business portfolio.
+2. **Add the Instagram product** (Instagram Graph API) to the app.
+3. **Generate a long-lived token** with these permissions:
+   `instagram_basic`, `instagram_manage_insights`, `pages_read_engagement`,
+   `pages_show_list`.
+   - Quickest: Graph API Explorer → your app → get a User token with those
+     scopes → exchange for a long-lived token (~60 days).
+   - More durable: a **System User** token in Business Settings.
+4. **Find the IG account id.** In the Apps Script editor, set
+   `META_ACCESS_TOKEN` first, then Run ▶ **`metaListIgAccounts`** and read the
+   `instagram_business_account.id` from the log.
+5. **Set Script Properties:** `IG_USER_ID`, `META_ACCESS_TOKEN` (and, for
+   auto-refresh, `META_APP_ID` + `META_APP_SECRET`).
+6. **Token upkeep:** long-lived tokens last ~60 days. Add a time-driven trigger
+   running `metaRefreshToken_` every ~50 days so it never lapses.
+7. Refresh the dashboard → the Instagram section populates (followers, reach,
+   follower growth, top posts). Meta renames insight metrics often, so we may
+   tweak `MetaProvider` against the first live response.
+
 ## Phase 2 note (not now)
 Site-search **terms** only return from GA4 if `search_term` is registered as a
 **custom dimension** (Admin → Custom definitions) — a ~5-min step before that
