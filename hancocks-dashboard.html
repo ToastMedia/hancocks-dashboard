@@ -597,28 +597,43 @@ async function loadAll() {
   setLoading(true);
   document.getElementById('lastUpdated').innerHTML = '<span class="spinner"></span>Refreshing…';
   hideError();
-  try {
-    const [conv, biz, traffic, audience] = await Promise.all([
-      callModule('conversions'), callModule('business'),
-      callModule('traffic'), callModule('audience')
-    ]);
+  // Each module loads independently: one failing section degrades gracefully
+  // (a non-fatal note) instead of blanking the whole dashboard.
+  const modules = [
+    ['conversions', renderConversions],
+    ['business', renderBusiness],
+    ['traffic', renderTraffic],
+    ['audience', renderAudience]
+  ];
+  const results = await Promise.allSettled(modules.map(m => callModule(m[0])));
 
-    renderConversions(conv.data);
-    renderBusiness(biz.data);
-    renderTraffic(traffic.data);
-    renderAudience(audience.data);
+  let authFailed = false;
+  let convData = null;
+  const failed = [];
+  results.forEach((res, i) => {
+    const [name, renderFn] = modules[i];
+    if (res.status === 'fulfilled') {
+      try {
+        renderFn(res.value.data);
+        if (name === 'conversions') convData = res.value.data;
+      } catch (e) { console.error(name, e); failed.push(name); }
+    } else {
+      console.error(name, res.reason);
+      if (res.reason && res.reason.authError) authFailed = true;
+      failed.push(name);
+    }
+  });
 
-    const stamp = new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    const dataDate = conv.data.lastDataDate ? ' · data to ' + conv.data.lastDataDate : '';
-    document.getElementById('lastUpdated').textContent = 'Updated ' + stamp + dataDate;
-  } catch (e) {
-    console.error(e);
-    if (e.authError) { requireReauth('This Google account is not authorised for this dashboard.'); return; }
-    showError('Could not load data. ' + e.message);
-    document.getElementById('lastUpdated').textContent = 'Failed to load';
-  } finally {
-    setLoading(false);
+  if (authFailed) { requireReauth('This Google account is not authorised for this dashboard.'); return; }
+
+  const stamp = new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const dataDate = convData && convData.lastDataDate ? ' · data to ' + convData.lastDataDate : '';
+  document.getElementById('lastUpdated').textContent = (failed.length === modules.length ? 'Failed to load' : 'Updated ' + stamp + dataDate);
+
+  if (failed.length) {
+    showError('Some sections could not load: ' + failed.join(', ') + '. The rest updated normally — try Refresh.');
   }
+  setLoading(false);
 }
 
 function setLoading(on) {
