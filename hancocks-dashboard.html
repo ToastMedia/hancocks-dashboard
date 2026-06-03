@@ -496,11 +496,11 @@
     </div>
 
     <!-- Local Visibility: Google Business Profile -->
-    <div class="section-label" style="margin-top:32px">Local Visibility &nbsp;<span class="pill">Google Business Profile</span></div>
+    <div class="section-label" id="localVisibilityLabel" style="margin-top:32px;display:none">Local Visibility &nbsp;<span class="pill">Google Business Profile</span></div>
     <div id="localVisibility"></div>
 
     <!-- Instagram -->
-    <div class="section-label" style="margin-top:32px">Instagram &nbsp;<span class="pill">Meta</span></div>
+    <div class="section-label" id="instagramLabel" style="margin-top:32px;display:none">Instagram &nbsp;<span class="pill">Meta</span></div>
     <div id="instagram"></div>
 
     <div class="footer">
@@ -970,10 +970,10 @@ function renderDeviceChart(devices) {
 /* ===================== Local Visibility (GBP) render ===================== */
 function renderLocalVisibility(d) {
   const box = document.getElementById('localVisibility');
-  if (!d || d.configured === false) {
-    box.innerHTML = '<div class="card"><div class="ga4-unavailable">Google Business Profile isn\'t connected yet. Once API access is approved and a location is set, local impressions, calls, directions and search keywords appear here.</div></div>';
-    return;
-  }
+  const label = document.getElementById('localVisibilityLabel');
+  // Hide the whole section until GBP is connected.
+  if (!d || d.configured === false) { box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none'; return; }
+  box.style.display = ''; label.style.display = '';
   if (!d.daily || !d.daily.ok || !d.derived) {
     box.innerHTML = '<div class="card">' + ga4Unavailable(d.daily && d.daily.error) + '</div>';
     return;
@@ -1045,10 +1045,10 @@ function gbpTile(label, val) {
 /* ========================= Instagram (Meta) render ====================== */
 function renderInstagram(d) {
   const box = document.getElementById('instagram');
-  if (!d || d.configured === false) {
-    box.innerHTML = '<div class="card"><div class="ga4-unavailable">Instagram isn\'t connected yet. Once the Meta app + access token are in place, followers, reach, follower growth and top posts appear here.</div></div>';
-    return;
-  }
+  const label = document.getElementById('instagramLabel');
+  // Hide the whole section until Instagram is connected.
+  if (!d || d.configured === false) { box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none'; return; }
+  box.style.display = ''; label.style.display = '';
   const prof = d.profile && d.profile.ok ? d.profile.value : null;
   const reach = d.reach && d.reach.ok ? d.reach.value : [];
   const followersSeries = d.followers && d.followers.ok ? d.followers.value : [];
