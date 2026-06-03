@@ -196,6 +196,8 @@ function buildTrafficModule_(params) {
     src.forEach(function (r) {
       var source = String(r['Source'] || '(direct)').toLowerCase();
       var medium = String(r['Medium'] || '(none)').toLowerCase();
+      // Skip unattributed noise: GA4 can't tie (not set) source/medium to anything actionable.
+      if (source === '(not set)' || medium === '(not set)') return;
       var sessions = sessMap[source + ' / ' + medium] || 0;
       if (sessions < 20) return; // ignore low-volume noise
       var hi = toNum_(r['Enquiry']) + toNum_(r['Book Appt']);
