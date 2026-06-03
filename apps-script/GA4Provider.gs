@@ -189,3 +189,20 @@ function ga4SessionsByDimension_(windowDays, dimName, limit) {
     return { name: r.dims[0] || '(not set)', sessions: r.mets[0] };
   });
 }
+
+/**
+ * Top cities WITH their country, so the front end can flag remarkable non-UK
+ * demand (e.g. Singapore for a Mayfair jeweller). -> [{ name, country, sessions }]
+ */
+function ga4TopCitiesWithCountry_(windowDays, limit) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'city' }, { name: 'country' }],
+    metrics: [{ name: 'sessions' }],
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+    limit: limit || 10
+  });
+  return ga4Rows_(rep).map(function (r) {
+    return { name: r.dims[0] || '(not set)', country: r.dims[1] || '', sessions: r.mets[0] };
+  });
+}

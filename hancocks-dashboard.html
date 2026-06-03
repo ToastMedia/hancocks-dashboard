@@ -178,6 +178,8 @@
   }
   .sowhat-text { font-family: var(--font-display); font-size: 21px; font-weight: 400; line-height: 1.5; color: var(--text); }
   .sowhat-text .watch { color: var(--gold-light); }
+  .sowhat-text .reco { color: var(--gold); font-weight: 500; }
+  .sowhat-text .reco::before { content: '→ '; opacity: 0.7; }
 
   .section-label {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
@@ -284,6 +286,32 @@
   .ga4-unavailable { font-size: 12px; color: var(--text-dim); line-height: 1.5; padding: 8px 0; }
   .pill { display: inline-block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold-dim); padding: 2px 8px; margin-left: 8px; }
 
+  /* Italic contextual caption (e.g. new-vs-returning note) */
+  .caption-note { font-size: 11px; font-style: italic; color: var(--text-muted); line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(42,42,42,0.5); }
+
+  /* Geographic Reach (promoted) callout */
+  .geo-callout {
+    background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.03));
+    border: 1px solid var(--gold-dim); border-left: 2px solid var(--gold);
+    padding: 16px 22px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  }
+  .geo-callout .geo-flag { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+  .geo-callout .geo-text { font-family: var(--font-display); font-size: 18px; color: var(--text); line-height: 1.4; }
+  .geo-callout .geo-text b { color: var(--gold-light); font-weight: 500; }
+
+  /* Notable / emerging traffic sources callout */
+  .grid-sources { display: grid; grid-template-columns: 1.2fr 0.9fr 1.2fr; gap: 16px; margin-bottom: 32px; }
+  .notable-card {
+    background: linear-gradient(160deg, rgba(201,168,76,0.10), rgba(201,168,76,0.02));
+    border: 1px solid var(--gold-dim); padding: 24px; display: flex; flex-direction: column;
+  }
+  .notable-item { padding: 12px 0; border-bottom: 1px solid rgba(42,42,42,0.5); }
+  .notable-item:last-child { border-bottom: none; }
+  .notable-tag { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); background: var(--gold-dim); padding: 2px 7px; display: inline-block; }
+  .notable-name { font-family: var(--font-display); font-size: 20px; font-weight: 400; color: var(--text); margin-top: 8px; }
+  .notable-val { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .notable-empty { font-size: 12px; color: var(--text-dim); font-style: italic; line-height: 1.6; margin-top: 8px; }
+
   .footer {
     margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border);
     display: flex; justify-content: space-between; align-items: center;
@@ -297,7 +325,7 @@
   /* Responsive */
   @media (max-width: 900px) {
     .header, .main { padding-left: 20px; padding-right: 20px; }
-    .hero-row, .grid-2, .grid-3, .grid-even-2 { grid-template-columns: 1fr; }
+    .hero-row, .grid-2, .grid-3, .grid-even-2, .grid-sources { grid-template-columns: 1fr; }
     .scorecards-grid { grid-template-columns: repeat(2, 1fr); }
     .header-left h1 { font-size: 28px; }
     .sowhat-text { font-size: 18px; }
@@ -414,6 +442,22 @@
       </div>
     </div>
 
+    <!-- Geographic Reach (promoted — strategically important for Hancocks) -->
+    <div class="section-label" style="margin-top:32px">Geographic Reach &nbsp;<span class="pill">GA4</span></div>
+    <div id="geoCallout"></div>
+    <div class="grid-even-2">
+      <div class="card">
+        <div class="card-title">Sessions by Country</div>
+        <div class="card-subtitle">Where your audience is</div>
+        <div id="geoCountriesBox"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sessions by City</div>
+        <div class="card-subtitle">Top cities by sessions</div>
+        <div id="geoCitiesBox"></div>
+      </div>
+    </div>
+
     <!-- Module 2: Traffic & Acquisition -->
     <div class="section-label" style="margin-top:32px">Traffic &amp; Acquisition</div>
     <div class="grid-3">
@@ -433,11 +477,16 @@
         <div id="engagementBox"></div>
       </div>
     </div>
-    <div class="grid-even-2">
+    <div class="grid-sources">
       <div class="card">
         <div class="card-title">Source Efficiency</div>
         <div class="card-subtitle">Enquiries &amp; appointments per 100 sessions — quality, not volume</div>
         <div id="sourceEffBox"><table class="data-table" id="sourceEffTable"></table></div>
+      </div>
+      <div class="notable-card">
+        <div class="card-title">Notable Sources</div>
+        <div class="card-subtitle">Unusual &amp; emerging traffic</div>
+        <div id="notableSourcesBox"></div>
       </div>
       <div class="card">
         <div class="card-title">Referral Sources &amp; Campaigns</div>
@@ -453,20 +502,15 @@
       <div class="card-subtitle">Daily sessions across the selected window</div>
       <div id="sessionsTrendBox"><div class="chart-wrap"><canvas id="sessionsTrendChart"></canvas></div></div>
     </div>
-    <div class="grid-3">
+    <div class="grid-even-2">
       <div class="card">
         <div class="card-title">Top Sources &amp; Mediums</div>
         <div class="card-subtitle">Granular acquisition</div>
         <div id="sourceMediumBox"></div>
       </div>
       <div class="card">
-        <div class="card-title">Sessions by Location</div>
-        <div class="card-subtitle">Country &amp; city</div>
-        <div id="geoSessionsBox"></div>
-      </div>
-      <div class="card">
         <div class="card-title">Sessions by Device</div>
-        <div class="card-subtitle">Device category</div>
+        <div class="card-subtitle">Device category split</div>
         <div id="deviceSessionsBox"></div>
       </div>
     </div>
@@ -505,7 +549,6 @@
 
     <div class="footer">
       <div>Secure data via authenticated Apps Script &nbsp;·&nbsp; GA4 Property <span>465868062</span></div>
-      <div>Built by <span>Toast Media</span></div>
     </div>
   </div>
 </div>
@@ -718,9 +761,14 @@ const EVENT_TYPES = {
 };
 
 function renderConversions(d) {
-  // So-What header
+  // So-What header — style watch-outs and recommendations distinctly.
   if (d.soWhat && d.soWhat.sentences && d.soWhat.sentences.length) {
-    const html = d.soWhat.sentences.map(s => /watch-out/i.test(s) ? '<span class="watch">' + s + '</span>' : s).join(' ');
+    const recoLead = /^(Focus|Lean|Double down|Prioritise|Prioritize|Capture|Keep|Nurture|Push|Invest)\b/;
+    const html = d.soWhat.sentences.map(s => {
+      if (/watch-out/i.test(s)) return '<span class="watch">' + s + '</span>';
+      if (recoLead.test(s)) return '<span class="reco">' + s + '</span>';
+      return s;
+    }).join(' ');
     document.getElementById('sowhatText').innerHTML = html;
     document.getElementById('sowhat').style.display = 'block';
   }
@@ -730,7 +778,7 @@ function renderConversions(d) {
   document.getElementById('momentumValue').textContent = fmtNum(Math.round(m.current));
   const ch = fmtChange(m.changePct);
   const badge = document.getElementById('momentumChange');
-  badge.className = 'badge ' + ch.cls; badge.textContent = ch.arrow + ' ' + ch.text + ' vs prev';
+  badge.className = 'badge ' + ch.cls; badge.textContent = ch.arrow + ' ' + ch.text + ' vs previous ' + state.window + ' days';
   document.getElementById('momentumSpark').innerHTML = sparklineSvg(m.sparkline);
 
   // Scorecards
@@ -826,14 +874,16 @@ function renderTraffic(d) {
   } else {
     const e = eng.value;
     let nvrHtml = '';
+    let nvrNote = '';
     if (nvr.ok && nvr.value.length) {
       const total = nvr.value.reduce((a, b) => a + b.users, 0) || 1;
       nvrHtml = nvr.value.map(v => '<div class="metric-tile"><div class="metric-tile-label">' + v.type + ' visitors</div><div class="metric-tile-val">' + Math.round(v.users / total * 100) + '%</div></div>').join('');
+      nvrNote = '<div class="caption-note">High new visitor rate is normal for luxury discovery, but growing your returning rate builds pipeline. Newsletter signups are key.</div>';
     }
     box.innerHTML = '<div class="metric-tiles">' +
       '<div class="metric-tile"><div class="metric-tile-label">Avg session</div><div class="metric-tile-val">' + fmtDuration(e.avgDurationSec) + '</div></div>' +
       '<div class="metric-tile"><div class="metric-tile-label">Pages / session</div><div class="metric-tile-val">' + (e.pagesPerSession || 0).toFixed(1) + '</div></div>' +
-      nvrHtml + '</div>';
+      nvrHtml + '</div>' + nvrNote;
   }
 
   // Source efficiency (value layer)
@@ -862,11 +912,144 @@ function renderTraffic(d) {
   }
   document.getElementById('sourcesBody').innerHTML = html || '<tr><td colspan="2" class="muted">No data</td></tr>';
 
+  // Notable / emerging sources callout (AI referrers etc.)
+  renderNotableSources(d);
+
+  // Geographic Reach (promoted section)
+  renderGeoReach(d.ga4.geoSessions);
+
   // Traffic deep-dive (GA4)
   renderSessionsTrend(d.ga4.sessionsTrend);
   renderGa4Table(null, 'sourceMediumBox', d.ga4.sourceMediums, r => [r.source + ' / ' + r.medium, r.sessions]);
-  renderGeoSessions('geoSessionsBox', d.ga4.geoSessions);
-  renderGa4Table(null, 'deviceSessionsBox', d.ga4.deviceSessions, r => [r.name, r.sessions]);
+  renderSessionDeviceDonut('deviceSessionsBox', d.ga4.deviceSessions);
+}
+
+/* ---------------------- Notable / emerging sources ----------------------- */
+// 2025/2026 insight: surface AI assistants sending traffic — genuinely valuable
+// for a luxury brand tracking how discovery is shifting.
+const AI_REFERRERS = [
+  { match: /chatgpt\.com|chat\.openai\.com|openai\.com/i, name: 'ChatGPT' },
+  { match: /perplexity\.ai/i, name: 'Perplexity' },
+  { match: /gemini\.google|bard\.google/i, name: 'Gemini' },
+  { match: /copilot\.microsoft|bing\.com\/chat/i, name: 'Copilot' },
+  { match: /claude\.ai/i, name: 'Claude' }
+];
+
+function detectAiReferrers(d) {
+  const found = {};
+  const add = (name, n) => { found[name] = (found[name] || 0) + (Number(n) || 0); };
+  // Prefer GA4 source/medium (has sessions).
+  const sm = d.ga4 && d.ga4.sourceMediums && d.ga4.sourceMediums.ok ? d.ga4.sourceMediums.value : [];
+  sm.forEach(r => {
+    const hay = (r.source || '') + ' / ' + (r.medium || '');
+    AI_REFERRERS.forEach(ai => { if (ai.match.test(hay)) add(ai.name, r.sessions); });
+  });
+  // Fallback to sheet sources (conversions) if GA4 unavailable/empty.
+  if (!Object.keys(found).length) {
+    (d.sources || []).forEach(s => {
+      AI_REFERRERS.forEach(ai => { if (ai.match.test(s.label || '')) add(ai.name, s.conversions); });
+    });
+  }
+  return Object.keys(found).map(name => ({ name, sessions: found[name] }))
+    .sort((a, b) => b.sessions - a.sessions);
+}
+
+function renderNotableSources(d) {
+  const box = document.getElementById('notableSourcesBox');
+  if (!box) return;
+  const ai = detectAiReferrers(d);
+  const usingSessions = d.ga4 && d.ga4.sourceMediums && d.ga4.sourceMediums.ok && d.ga4.sourceMediums.value.length;
+  if (!ai.length) {
+    box.innerHTML = '<div class="notable-empty">No unusual or emerging sources detected this period. We watch for AI assistants (ChatGPT, Perplexity, Gemini) and other new referrers automatically.</div>';
+    return;
+  }
+  box.innerHTML = ai.map(r =>
+    '<div class="notable-item"><span class="notable-tag">AI Referral</span>' +
+    '<div class="notable-name">' + r.name + '</div>' +
+    '<div class="notable-val">' + fmtNum(r.sessions) + (usingSessions ? ' sessions' : ' conversions') + ' this period</div></div>'
+  ).join('');
+}
+
+/* -------------------------- Geographic Reach ----------------------------- */
+const UK_COUNTRY = 'United Kingdom';
+
+function renderGeoReach(result) {
+  const cBox = document.getElementById('geoCountriesBox');
+  const ctBox = document.getElementById('geoCitiesBox');
+  const calloutBox = document.getElementById('geoCallout');
+  calloutBox.innerHTML = '';
+  if (!result || !result.ok) {
+    cBox.innerHTML = ga4Unavailable(result && result.error);
+    ctBox.innerHTML = '';
+    return;
+  }
+  const countries = (result.value && result.value.countries) || [];
+  const cities = (result.value && result.value.cities) || [];
+
+  // Countries table
+  if (!countries.length) {
+    cBox.innerHTML = '<div class="ga4-unavailable">No country data for this window.</div>';
+  } else {
+    const cMax = Math.max.apply(null, countries.map(r => r.sessions));
+    cBox.innerHTML = '<table class="data-table"><tbody>' + countries.map(r =>
+      '<tr><td>' + r.name + barCell(r.sessions, cMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>'
+    ).join('') + '</tbody></table>';
+  }
+
+  // Cities table (city names may carry a country for non-UK clarity)
+  if (!cities.length) {
+    ctBox.innerHTML = '<div class="ga4-unavailable">No city data for this window.</div>';
+  } else {
+    const ctMax = Math.max.apply(null, cities.map(r => r.sessions));
+    ctBox.innerHTML = '<table class="data-table"><tbody>' + cities.map(r => {
+      const isUk = !r.country || r.country === UK_COUNTRY;
+      const place = r.name + (isUk ? '' : ' <span class="muted" style="font-size:11px">· ' + r.country + '</span>');
+      return '<tr><td>' + place + barCell(r.sessions, ctMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+
+  // Callout: any non-UK city breaking 500 sessions is remarkable for a Mayfair jeweller.
+  const remarkable = cities
+    .filter(r => r.country && r.country !== UK_COUNTRY && r.name && r.name !== '(not set)' && r.sessions >= 500)
+    .sort((a, b) => b.sessions - a.sessions);
+  if (remarkable.length) {
+    const top = remarkable[0];
+    const extra = remarkable.length > 1 ? ' (plus ' + (remarkable.length - 1) + ' more international ' + (remarkable.length - 1 === 1 ? 'city' : 'cities') + ' over 500)' : '';
+    calloutBox.innerHTML = '<div class="geo-callout"><span class="geo-flag">International Demand</span>' +
+      '<span class="geo-text"><b>' + top.name + '</b> drove <b>' + fmtNum(top.sessions) + '</b> sessions this period — remarkable overseas interest for a Mayfair jeweller' + extra + '. Worth considering for international outreach.</span></div>';
+  }
+}
+
+/* ----------------------- Sessions by Device donut ------------------------ */
+function renderSessionDeviceDonut(boxId, result) {
+  const box = document.getElementById(boxId);
+  if (!result || !result.ok) { box.innerHTML = ga4Unavailable(result && result.error); return; }
+  const rows = (result.value || []).filter(r => (r.sessions || 0) > 0);
+  if (!rows.length) { box.innerHTML = '<div class="ga4-unavailable">No device data for this window.</div>'; return; }
+  const total = rows.reduce((a, r) => a + (r.sessions || 0), 0) || 1;
+  const colors = ['#c9a84c', '#5b9bd5', '#4caf7d', '#e8c97a', '#888'];
+  const labels = rows.map(r => capWords(r.name));
+  box.innerHTML = '<div class="donut-wrap"><canvas id="' + boxId + 'Canvas"></canvas>' +
+    '<div class="donut-center"><div class="donut-center-val">' + fmtNum(total) + '</div><div class="donut-center-label">Sessions</div></div></div>' +
+    '<div class="device-legend">' + rows.map((r, i) => {
+      const pct = Math.round(r.sessions / total * 100);
+      return '<div class="device-legend-item"><div class="device-legend-left"><div class="device-dot" style="background:' + colors[i % colors.length] + '"></div><span>' + labels[i] + '</span></div>' +
+        '<div class="device-legend-val">' + pct + '%</div></div>';
+    }).join('') + '</div>';
+  if (charts[boxId]) charts[boxId].destroy();
+  charts[boxId] = new Chart(document.getElementById(boxId + 'Canvas'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: rows.map(r => r.sessions), backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#181818', borderColor: '#2a2a2a', borderWidth: 1, titleColor: '#7a7570', bodyColor: '#f0ece4', padding: 10,
+        callbacks: { label: c => c.label + ': ' + fmtNum(c.parsed) + ' (' + Math.round(c.parsed / total * 100) + '%)' } } }
+    }
+  });
+}
+
+function capWords(s) {
+  return String(s || '').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function renderSessionsTrend(result) {
@@ -887,22 +1070,6 @@ function renderSessionsTrend(result) {
         y: { grid: { color: 'rgba(42,42,42,0.5)' }, ticks: { color: '#4a4540', font: { size: 10 } } } }
     }
   });
-}
-
-function renderGeoSessions(boxId, result) {
-  const box = document.getElementById(boxId);
-  if (!result || !result.ok) { box.innerHTML = ga4Unavailable(result && result.error); return; }
-  const countries = (result.value && result.value.countries) || [];
-  const cities = (result.value && result.value.cities) || [];
-  if (!countries.length && !cities.length) { box.innerHTML = '<div class="ga4-unavailable">No location data for this window.</div>'; return; }
-  const cMax = Math.max.apply(null, countries.map(r => r.sessions).concat([0]));
-  let html = countries.map(r => '<tr><td>' + r.name + barCell(r.sessions, cMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>').join('');
-  if (cities.length) {
-    html += '<tr><td colspan="2" style="padding-top:14px;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Cities</td></tr>';
-    const ctMax = Math.max.apply(null, cities.map(r => r.sessions).concat([0]));
-    html += cities.map(r => '<tr><td>' + r.name + barCell(r.sessions, ctMax) + '</td><td class="num">' + fmtNum(r.sessions) + '</td></tr>').join('');
-  }
-  box.innerHTML = '<table class="data-table"><tbody>' + html + '</tbody></table>';
 }
 
 function renderGa4Table(bodyId, boxId, result, mapFn, field) {

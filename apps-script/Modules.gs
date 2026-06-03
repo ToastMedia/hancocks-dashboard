@@ -192,7 +192,7 @@ function buildTrafficModule_(params) {
   var sessionsTrend = tryGa4_(function () { return ga4SessionsTrend_(w); });
   var sourceMediums = tryGa4_(function () { return ga4TopSourceMediums_(w, 10); });
   var geoSessions = tryGa4_(function () {
-    return { countries: ga4SessionsByDimension_(w, 'country', 8), cities: ga4SessionsByDimension_(w, 'city', 8) };
+    return { countries: ga4SessionsByDimension_(w, 'country', 8), cities: ga4TopCitiesWithCountry_(w, 10) };
   });
   var deviceSessions = tryGa4_(function () { return ga4SessionsByDimension_(w, 'deviceCategory', 6); });
 

@@ -134,19 +134,54 @@ function computeEventDeltas_(windows) {
 }
 
 /**
- * Rules-based "So-What" header: biggest mover, what's driving momentum, one
- * watch-out. Returns sentences (for display) + the structured signals behind
- * them (so the front end can style/badge without re-deriving anything).
+ * Plain-language nouns for each event, used to write So-What sentences that read
+ * like a person wrote them ("76 product scrolls and 12 shares") rather than
+ * exposing raw event keys/labels.
+ */
+var EVENT_NOUNS = {
+  whatsapp_click: 'WhatsApp clicks',
+  phone_call_click: 'phone calls',
+  enquiry_click: 'enquiries',
+  appointment_click: 'appointment bookings',
+  email_click: 'email clicks',
+  newsletter_signup: 'newsletter signups',
+  site_search: 'site searches',
+  content_click: 'content clicks',
+  scroll_50_product: 'product scrolls',
+  share_click: 'shares'
+};
+
+/** Friendly window phrase: 7 -> "this week", 30 -> "this month", 90 -> "this quarter". */
+function windowPhrase_(windowDays) {
+  if (windowDays <= 7) return 'this week';
+  if (windowDays <= 31) return 'this month';
+  if (windowDays <= 92) return 'this quarter';
+  return 'this period';
+}
+
+/** Plain-language noun for an event delta. */
+function eventNoun_(d) {
+  return EVENT_NOUNS[d.key] || (String(d.label || '').toLowerCase() + ' events');
+}
+
+/**
+ * Rules-based "So-What" header. Always grounded in REAL numbers and ends with at
+ * least one actionable recommendation chosen from the actual data pattern.
+ * Returns display sentences + the structured signals behind them.
  */
 function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
   var sentences = [];
   var signals = {};
-  var label = windowDays + '-day';
+  var phrase = windowPhrase_(windowDays);
   var prevLabel = 'the previous ' + windowDays + ' days';
 
-  // 1) Momentum headline.
+  var convTotal = windows.current.conversions || 0;
+  var engTotal = windows.current.engagement || 0;
+
+  // 1) Momentum headline (always carries the index number).
   if (momentum.changePct === null) {
-    sentences.push('Commercial momentum is building from a standing start this ' + label + ' period.');
+    sentences.push('Commercial momentum is building from a standing start ' + phrase +
+      ' (index ' + Math.round(momentum.current) + ').');
   } else {
     var dir = momentum.changePct >= 0 ? 'up' : 'down';
     sentences.push('Commercial momentum is ' + dir + ' ' + fmtPct_(momentum.changePct) +
@@ -154,20 +189,52 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
     signals.momentum = { dir: dir, changePct: momentum.changePct };
   }
 
-  // 2) Biggest mover among conversion events (require a little volume).
+  // 2) The engagement-vs-conversion pattern, named with real event numbers.
+  var topEng = deltas.filter(function (d) { return d.type === 'engagement' && d.current > 0; })
+    .sort(function (a, b) { return b.current - a.current; }).slice(0, 2);
+  var topConv = deltas.filter(function (d) { return d.type === 'conversion' && d.current > 0; })
+    .sort(function (a, b) { return b.current - a.current; })[0] || null;
+
+  if (topEng.length) {
+    var namedEng = topEng.map(function (d) { return grp_(d.current) + ' ' + eventNoun_(d); });
+    var engList = namedEng.length === 2 ? namedEng[0] + ' and ' + namedEng[1] : namedEng[0];
+    var rel;
+    if (convTotal === 0) rel = 'plenty of engagement but no conversions logged yet';
+    else if (engTotal >= convTotal * 3) rel = 'engagement is well ahead of conversions';
+    else if (engTotal > convTotal) rel = 'engagement is running ahead of conversions';
+    else rel = 'conversions are keeping pace with engagement';
+    sentences.push(engList + ' ' + phrase + ' — ' + rel + '.');
+    signals.balance = { conversions: convTotal, engagement: engTotal };
+  } else if (topConv) {
+    sentences.push(grp_(topConv.current) + ' ' + eventNoun_(topConv) + ' ' + phrase +
+      ' lead the way commercially.');
+  }
+
+  // 3) Recommendation (ALWAYS present) — chosen from the dominant data pattern.
+  var reco;
+  if (funnel && funnel.enquiries >= 5 && funnel.conversionPct !== null && funnel.conversionPct < 0.2) {
+    reco = 'Prioritise faster enquiry follow-up to lift the ' + fmtPct_(funnel.conversionPct) +
+      ' enquiry-to-appointment rate.';
+  } else if (engTotal >= convTotal * 3 && engTotal > 0) {
+    reco = 'Focus on converting browsers to enquirers — clearer enquiry prompts and newsletter capture turn this engagement into pipeline.';
+  } else if (momentum.changePct !== null && momentum.changePct < -0.1 && topConv) {
+    reco = 'Lean back into ' + eventNoun_(topConv) + ', your strongest converter, to steady momentum.';
+  } else if (topConv) {
+    reco = 'Double down on ' + eventNoun_(topConv) + ' (' + grp_(topConv.current) + ' ' + phrase +
+      ') — it is your strongest commercial signal.';
+  } else {
+    reco = 'Focus on capturing more enquiries — add clear contact prompts on your highest-traffic pages.';
+  }
+  sentences.push(reco);
+  signals.recommendation = reco;
+
+  // 4) Watch-out: a notable conversion drop, or a leaky enquiry->appointment funnel.
   var movers = deltas.filter(function (d) {
     return d.type === 'conversion' && d.changePct !== null && (d.current + d.previous) >= 5;
   });
   movers.sort(function (a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
-  if (movers.length) {
-    var m = movers[0];
-    var verb = m.changePct >= 0 ? 'rose' : 'fell';
-    sentences.push('Biggest mover: ' + m.label + ' ' + verb + ' ' + fmtPct_(m.changePct) +
-      ' (' + m.current + ' vs ' + m.previous + ').');
-    signals.biggestMover = m;
-  }
+  if (movers.length) signals.biggestMover = movers[0];
 
-  // 3) Watch-out: a notable conversion drop, or a leaky enquiry->appointment funnel.
   var watch = null;
   if (funnel && funnel.enquiries >= 5 && funnel.conversionPct !== null && funnel.conversionPct < 0.2) {
     watch = 'Watch-out: only ' + fmtPct_(funnel.conversionPct) + ' of enquiries are converting to appointments — a funnel leak worth a look.';
@@ -177,7 +244,7 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
       return d.type === 'conversion' && d.changePct !== null && d.changePct <= -0.2 && d.previous >= 5;
     });
     drops.sort(function (a, b) { return a.changePct - b.changePct; });
-    if (drops.length && (!signals.biggestMover || drops[0].key !== signals.biggestMover.key || signals.biggestMover.changePct >= 0)) {
+    if (drops.length) {
       watch = 'Watch-out: ' + drops[0].label + ' is down ' + fmtPct_(Math.abs(drops[0].changePct)) +
         ' on ' + prevLabel + '.';
       signals.watchOut = { type: 'drop', event: drops[0].key, value: drops[0].changePct };
@@ -191,4 +258,9 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
 /** Format a fraction as a signed/absolute percentage string. */
 function fmtPct_(frac) {
   return Math.round(Math.abs(frac) * 100) + '%';
+}
+
+/** Group a number with thousands separators (server-side). */
+function grp_(n) {
+  return (Number(n) || 0).toLocaleString('en-GB');
 }
