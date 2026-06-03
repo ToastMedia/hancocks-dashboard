@@ -24,8 +24,11 @@ function getSpreadsheet_() {
  * @return {Array<Object>}
  */
 function readTab_(tabName) {
-  var sheet = getSpreadsheet_().getSheetByName(tabName);
-  if (!sheet) throw new Error('Sheet tab not found: ' + tabName);
+  var sheet = getSheetResilient_(tabName);
+  if (!sheet) {
+    var names = getSpreadsheet_().getSheets().map(function (s) { return s.getName(); });
+    throw new Error('Sheet tab not found: ' + tabName + ' (available: ' + names.join(', ') + ')');
+  }
   var range = sheet.getDataRange();
   var values = range.getValues();
   if (values.length < 2) return [];
@@ -45,6 +48,28 @@ function readTab_(tabName) {
     rows.push(obj);
   }
   return rows;
+}
+
+/**
+ * Resolve a tab by name, tolerant of casing and stray/invisible whitespace
+ * (trailing spaces, non-breaking spaces) — getSheetByName is strict-exact and
+ * silently misses those, which is a common cause of "tab not found".
+ */
+function getSheetResilient_(tabName) {
+  var ss = getSpreadsheet_();
+  var exact = ss.getSheetByName(tabName);
+  if (exact) return exact;
+  var target = normalizeTabName_(tabName);
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (normalizeTabName_(sheets[i].getName()) === target) return sheets[i];
+  }
+  return null;
+}
+
+/** Lowercase, collapse all whitespace (incl. non-breaking) to single spaces, trim. */
+function normalizeTabName_(s) {
+  return String(s).replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 /* ----------------------- typed accessors per tab ------------------------- */
