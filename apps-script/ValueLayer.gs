@@ -211,11 +211,10 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
   }
 
   // 3) Recommendation (ALWAYS present) — chosen from the dominant data pattern.
+  //    NB: enquiries and appointments are independent contact actions, not a
+  //    funnel, so we never frame them as an enquiry->appointment conversion.
   var reco;
-  if (funnel && funnel.enquiries >= 5 && funnel.conversionPct !== null && funnel.conversionPct < 0.2) {
-    reco = 'Prioritise faster enquiry follow-up to lift the ' + fmtPct_(funnel.conversionPct) +
-      ' enquiry-to-appointment rate.';
-  } else if (engTotal >= convTotal * 3 && engTotal > 0) {
+  if (engTotal >= convTotal * 3 && engTotal > 0) {
     reco = 'Focus on converting browsers to enquirers — clearer enquiry prompts and newsletter capture turn this engagement into pipeline.';
   } else if (momentum.changePct !== null && momentum.changePct < -0.1 && topConv) {
     reco = 'Lean back into ' + eventNoun_(topConv) + ', your strongest converter, to steady momentum.';
@@ -228,7 +227,7 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
   sentences.push(reco);
   signals.recommendation = reco;
 
-  // 4) Watch-out: a notable conversion drop, or a leaky enquiry->appointment funnel.
+  // 4) Watch-out: a notable drop in any single conversion event.
   var movers = deltas.filter(function (d) {
     return d.type === 'conversion' && d.changePct !== null && (d.current + d.previous) >= 5;
   });
@@ -236,19 +235,14 @@ function computeSoWhat_(windows, momentum, deltas, funnel, windowDays) {
   if (movers.length) signals.biggestMover = movers[0];
 
   var watch = null;
-  if (funnel && funnel.enquiries >= 5 && funnel.conversionPct !== null && funnel.conversionPct < 0.2) {
-    watch = 'Watch-out: only ' + fmtPct_(funnel.conversionPct) + ' of enquiries are converting to appointments — a funnel leak worth a look.';
-    signals.watchOut = { type: 'funnel', value: funnel.conversionPct };
-  } else {
-    var drops = deltas.filter(function (d) {
-      return d.type === 'conversion' && d.changePct !== null && d.changePct <= -0.2 && d.previous >= 5;
-    });
-    drops.sort(function (a, b) { return a.changePct - b.changePct; });
-    if (drops.length) {
-      watch = 'Watch-out: ' + drops[0].label + ' is down ' + fmtPct_(Math.abs(drops[0].changePct)) +
-        ' on ' + prevLabel + '.';
-      signals.watchOut = { type: 'drop', event: drops[0].key, value: drops[0].changePct };
-    }
+  var drops = deltas.filter(function (d) {
+    return d.type === 'conversion' && d.changePct !== null && d.changePct <= -0.2 && d.previous >= 5;
+  });
+  drops.sort(function (a, b) { return a.changePct - b.changePct; });
+  if (drops.length) {
+    watch = 'Watch-out: ' + drops[0].label + ' is down ' + fmtPct_(Math.abs(drops[0].changePct)) +
+      ' on ' + prevLabel + '.';
+    signals.watchOut = { type: 'drop', event: drops[0].key, value: drops[0].changePct };
   }
   if (watch) sentences.push(watch);
 

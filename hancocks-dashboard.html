@@ -246,14 +246,6 @@
   .truncate-mobile { display: block; padding-right: 10px; }
 
   /* Funnel */
-  .funnel { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
-  .funnel-stage { flex: 1; text-align: center; }
-  .funnel-stage-val { font-family: var(--font-display); font-size: 40px; font-weight: 300; color: var(--text); }
-  .funnel-stage-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
-  .funnel-arrow { text-align: center; color: var(--gold); }
-  .funnel-arrow .rate { font-family: var(--font-display); font-size: 24px; color: var(--gold-light); }
-  .funnel-arrow .rate-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
-
   /* Metric tiles */
   .metric-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
   .metric-tile { background: var(--surface); padding: 16px 18px; }
@@ -287,6 +279,51 @@
 
   .ga4-unavailable { font-size: 12px; color: var(--text-dim); line-height: 1.5; padding: 8px 0; }
   .pill { display: inline-block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold-dim); padding: 2px 8px; margin-left: 8px; }
+
+  /* Info tooltips (ⓘ) */
+  .info-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1px solid var(--gold); color: var(--gold);
+    font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600;
+    font-size: 10px; line-height: 1; opacity: 0.5; cursor: pointer;
+    margin-left: 6px; vertical-align: middle; flex-shrink: 0; user-select: none;
+    transition: opacity 0.15s;
+  }
+  .info-icon:hover, .info-icon:focus { opacity: 1; outline: none; }
+  .tooltip-pop {
+    position: fixed; z-index: 2000; max-width: 280px;
+    background: var(--surface2); border: 1px solid var(--gold); color: var(--text);
+    font-family: var(--font-body); font-size: 12px; line-height: 1.5; font-style: normal;
+    padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none; transition: opacity 0.12s; left: 0; top: 0;
+  }
+  .tooltip-pop.visible { opacity: 1; }
+
+  /* Direct Contact Actions panel */
+  .dc-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .dc-card { background: var(--surface); padding: 16px 18px; }
+  .dc-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; }
+  .dc-value { font-family: var(--font-display); font-size: 34px; font-weight: 300; color: var(--text); line-height: 1; }
+  .dc-sub { font-size: 10px; color: var(--text-dim); margin: 6px 0 8px; line-height: 1.4; }
+  .dc-total { margin-top: 16px; padding: 14px 18px; border: 1px solid var(--gold-dim); background: var(--gold-dim); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .dc-total-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); display: flex; align-items: center; }
+  .dc-total-right { display: flex; align-items: center; gap: 12px; }
+  .dc-total-value { font-family: var(--font-display); font-size: 30px; font-weight: 300; color: var(--gold-light); line-height: 1; }
+
+  /* Instagram stat tiles + demographics */
+  .ig-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .ig-stat { padding: 18px 20px; }
+  .ig-stat-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; }
+  .ig-stat-val { font-family: var(--font-display); font-size: 30px; font-weight: 300; color: var(--text); line-height: 1; }
+  .ig-stat-val.er-good { color: var(--green); }
+  .ig-stat-val.er-mid { color: var(--gold-light); }
+  .ig-stat-val.er-low { color: var(--red); }
+  .ig-stat-note { font-size: 9px; color: var(--text-dim); margin-top: 6px; letter-spacing: 0.04em; }
+  .gender-split { display: flex; gap: 16px; margin-top: 8px; }
+  .gender-item { flex: 1; text-align: center; padding: 18px 8px; background: var(--surface2); border: 1px solid var(--border); }
+  .gender-pct { font-family: var(--font-display); font-size: 38px; font-weight: 300; color: var(--gold-light); line-height: 1; }
+  .gender-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-top: 8px; }
 
   /* Italic contextual caption (e.g. new-vs-returning note) */
   .caption-note { font-size: 11px; font-style: italic; color: var(--text-muted); line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(42,42,42,0.5); }
@@ -328,7 +365,8 @@
   @media (max-width: 900px) {
     .header, .main { padding-left: 20px; padding-right: 20px; }
     .hero-row, .grid-2, .grid-3, .grid-even-2, .grid-sources { grid-template-columns: 1fr; }
-    .scorecards-grid { grid-template-columns: repeat(2, 1fr); }
+    .scorecards-grid, .ig-stats { grid-template-columns: repeat(2, 1fr); }
+    .tooltip-pop { max-width: calc(100vw - 24px); }
     .header-left h1 { font-size: 28px; }
     .sowhat-text { font-size: 18px; }
     /* Keep URL/path rows to a single tidy line so the count stays visible. */
@@ -344,7 +382,7 @@
     .header-left h1 { font-size: 24px; }
     .momentum-value { font-size: 48px; }
     .scorecard-value { font-size: 26px; }
-    .funnel-stage-val { font-size: 32px; }
+    .dc-value { font-size: 28px; }
     .sowhat-text { font-size: 17px; }
     .data-table td.num { font-size: 14px; }
     .truncate-mobile { max-width: calc(100vw - 120px); }
@@ -407,7 +445,7 @@
     <div class="section-label">Conversion Performance</div>
     <div class="hero-row">
       <div class="momentum-card">
-        <div class="momentum-label">Commercial Momentum</div>
+        <div class="momentum-label">Commercial Momentum <span class="info-icon" data-tip-key="momentum" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="momentum-value" id="momentumValue">—</div>
         <div class="momentum-meta">
           <span class="scorecard-period" id="momentumPeriod">weighted index</span>
@@ -416,7 +454,7 @@
         <div class="momentum-spark" id="momentumSpark"></div>
       </div>
       <div class="card">
-        <div class="card-title">Daily Conversion Trend</div>
+        <div class="card-title">Daily Conversion Trend <span class="info-icon" data-tip-key="trend" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Conversion vs engagement events per day</div>
         <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>
@@ -427,24 +465,24 @@
     <div class="section-label" style="margin-top:32px">Business Intelligence</div>
     <div class="grid-3">
       <div class="card">
-        <div class="card-title">Enquiry → Appointment</div>
-        <div class="card-subtitle">The core funnel</div>
-        <div class="funnel" id="funnel"></div>
+        <div class="card-title">Direct Contact Actions <span class="info-icon" data-tip-key="directContact" tabindex="0" role="button" aria-label="More information">i</span></div>
+        <div class="card-subtitle">Independent contact signals</div>
+        <div id="directContact"></div>
       </div>
       <div class="card">
-        <div class="card-title">How Clients Reach Out</div>
+        <div class="card-title">How Clients Reach Out <span class="info-icon" data-tip-key="howClientsReachOut" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Contact channel split</div>
         <table class="data-table"><tbody id="channelSplitBody"></tbody></table>
       </div>
       <div class="card">
-        <div class="card-title">Newsletter & Share</div>
+        <div class="card-title">Newsletter & Share <span class="info-icon" data-tip-key="newsletterShare" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Audience-building signals</div>
         <div id="newsletterShare"></div>
       </div>
     </div>
     <div class="grid-even-2">
       <div class="card">
-        <div class="card-title">Weekly Summary</div>
+        <div class="card-title">Weekly Summary <span class="info-icon" data-tip-key="weekly" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Conversions & engagement by week</div>
         <table class="data-table">
           <thead><tr><th>Week</th><th style="text-align:right">Conversions</th><th style="text-align:right">Engagement</th></tr></thead>
@@ -452,7 +490,7 @@
         </table>
       </div>
       <div class="card">
-        <div class="card-title">Monthly Summary</div>
+        <div class="card-title">Monthly Summary <span class="info-icon" data-tip-key="monthly" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Conversions & engagement by month</div>
         <table class="data-table">
           <thead><tr><th>Month</th><th style="text-align:right">Conversions</th><th style="text-align:right">Engagement</th></tr></thead>
@@ -462,7 +500,7 @@
     </div>
 
     <!-- Geographic Reach (promoted — strategically important for Hancocks) -->
-    <div class="section-label" style="margin-top:32px">Geographic Reach &nbsp;<span class="pill">GA4</span></div>
+    <div class="section-label" style="margin-top:32px">Geographic Reach &nbsp;<span class="pill">GA4</span> <span class="info-icon" data-tip-key="geo" tabindex="0" role="button" aria-label="More information">i</span></div>
     <div id="geoCallout"></div>
     <div class="grid-even-2">
       <div class="card">
@@ -481,24 +519,24 @@
     <div class="section-label" style="margin-top:32px">Traffic &amp; Acquisition</div>
     <div class="grid-3">
       <div class="card">
-        <div class="card-title">Sessions by Channel <span class="pill">GA4</span></div>
+        <div class="card-title">Sessions by Channel <span class="pill">GA4</span> <span class="info-icon" data-tip-key="channels" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Where visitors come from</div>
         <div id="channelsBox"><table class="data-table"><tbody id="channelsBody"></tbody></table></div>
       </div>
       <div class="card">
-        <div class="card-title">Top Landing Pages <span class="pill">GA4</span></div>
+        <div class="card-title">Top Landing Pages <span class="pill">GA4</span> <span class="info-icon" data-tip-key="landingPages" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">First page of the session</div>
         <div id="landingBox"><table class="data-table"><tbody id="landingBody"></tbody></table></div>
       </div>
       <div class="card">
-        <div class="card-title">Engagement Quality <span class="pill">GA4</span></div>
+        <div class="card-title">Engagement Quality <span class="pill">GA4</span> <span class="info-icon" data-tip-key="engagementQuality" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Session depth &amp; visitor mix</div>
         <div id="engagementBox"></div>
       </div>
     </div>
     <div class="grid-sources">
       <div class="card">
-        <div class="card-title">Source Efficiency</div>
+        <div class="card-title">Source Efficiency <span class="info-icon" data-tip-key="sourceEfficiency" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Enquiries &amp; appointments per 100 sessions — quality, not volume</div>
         <div id="sourceEffBox"><table class="data-table" id="sourceEffTable"></table></div>
       </div>
@@ -532,7 +570,7 @@
         <div id="sourceMediumBox"></div>
       </div>
       <div class="card">
-        <div class="card-title">Sessions by Device</div>
+        <div class="card-title">Sessions by Device <span class="info-icon" data-tip-key="sessionsByDevice" tabindex="0" role="button" aria-label="More information">i</span></div>
         <div class="card-subtitle">Device category split</div>
         <div id="deviceSessionsBox"></div>
       </div>
@@ -569,6 +607,10 @@
     <!-- Instagram -->
     <div class="section-label" id="instagramLabel" style="margin-top:32px;display:none">Instagram &nbsp;<span class="pill">Meta</span></div>
     <div id="instagram"></div>
+
+    <!-- Instagram follower demographics (shown only when data returns) -->
+    <div class="section-label" id="igDemographicsLabel" style="margin-top:32px;display:none">Follower Demographics &nbsp;<span class="pill">Meta</span> <span class="info-icon" data-tip-key="followerDemographics" tabindex="0" role="button" aria-label="More information">i</span></div>
+    <div id="igDemographics"></div>
 
     <div class="footer">
       <div>Secure data via authenticated Apps Script &nbsp;·&nbsp; GA4 Property <span>465868062</span></div>
@@ -746,6 +788,89 @@ function showError(msg) {
 }
 function hideError() { document.getElementById('errorBanner').classList.remove('visible'); }
 
+/* ------------------------- Info tooltips (ⓘ) ----------------------------- */
+// Plain-English explanations for a non-technical luxury-brand client. Keys are
+// referenced from both static markup (data-tip-key) and dynamic renders
+// (infoIcon). Add a key here + an icon anywhere to give a panel a tooltip.
+const TIPS = {
+  momentum: "A weighted index combining all conversion and engagement events. Higher is better. Use it to spot whether activity is building or slowing month on month.",
+  trend: "How conversion and engagement events are distributed across the period. A spike towards the end of the period is a positive sign.",
+  whatsapp_click: "Clicks on the WhatsApp contact button. WhatsApp enquiries often indicate high purchase intent — the visitor wants an immediate, personal response.",
+  phone_call_click: "Clicks on the phone number. Direct calls are typically from warm or ready-to-buy visitors.",
+  enquiry_click: "Submissions of the product page enquiry form. The visitor has seen a specific piece and wants to know more.",
+  appointment_click: "Clicks on the book an appointment button, which appears across the site. Appointment bookings are a strong indicator of serious buying intent.",
+  email_click: "Clicks on the email address link. Lower urgency than WhatsApp or phone but still a direct contact signal.",
+  newsletter_signup: "Sign-ups to the Hancocks newsletter. Indicates a visitor wants to stay connected — valuable for long-term relationship building.",
+  site_search: "Times a visitor used the search bar on the site. High search volume suggests visitors know what they want and are actively looking for it.",
+  content_click: "Clicks on editorial or discovery content. Shows visitors engaging with the brand story beyond just product pages.",
+  scroll_50_product: "Times a visitor scrolled at least 50% down a product page. A strong signal of genuine interest in a specific piece.",
+  share_click: "Times a visitor used the share button. Social sharing extends Hancocks' reach organically.",
+  directContact: "The total number of times visitors initiated direct contact with Hancocks this period across all channels — WhatsApp, phone, email, enquiry and appointment combined.",
+  enquiriesCard: "Product page enquiry form submissions this period. Independent from appointment bookings.",
+  appointmentsCard: "Appointment booking clicks across the site this period. Visitors can book directly from the homepage or any product page — independent from enquiries.",
+  howClientsReachOut: "The split between different contact methods. Use this to understand which channels your visitors prefer and ensure each one is well-resourced.",
+  newsletterShare: "Audience-building signals. Newsletter signups grow your direct marketing list; shares extend organic reach. Both are slow-burn but compound over time.",
+  weekly: "A week-by-week breakdown of conversion and engagement events. Useful for spotting patterns — are certain weeks consistently stronger?",
+  monthly: "Month-on-month totals. As data accumulates this will become your primary benchmark for business performance trends.",
+  geo: "Where your website visitors are coming from. The international mix is particularly relevant for a London jeweller attracting global clientele.",
+  channels: "How visitors found the site — organic search, direct, social, referral etc. Use this to understand which marketing activities are driving traffic.",
+  landingPages: "The first page visitors see when they arrive on the site. High traffic to specific product pages suggests strong SEO or social referral for those pieces.",
+  engagementQuality: "How deeply visitors are engaging — average time on site, pages viewed per visit, and the new vs returning visitor split.",
+  sourceEfficiency: "Which traffic sources produce the most enquiries and appointments per 100 sessions. A source with fewer sessions but higher efficiency is more valuable than a high-volume but low-converting source.",
+  sessionsByDevice: "The split between desktop, mobile and tablet visitors. Hancocks has an unusually even desktop/mobile split — ensure both experiences are equally strong.",
+  igFollowers: "The total number of @hancocks_london Instagram followers at the time of the last data refresh.",
+  followerGrowth: "Daily follower count across the period. Spikes often correlate with a high-performing post or press coverage.",
+  topPosts: "Recent posts ranked by total engagement (likes + comments + saves). Use this to identify what content resonates most with your audience.",
+  saves: "Times someone saved a post to their Instagram collection. Saves are a strong purchase intent signal — the visitor is bookmarking a piece they're considering.",
+  profileVisits: "How many accounts visited the @hancocks_london profile this period. The Instagram-to-website pipeline starts here.",
+  websiteClicks: "Clicks on the link in the @hancocks_london bio. The most direct measure of Instagram driving website traffic.",
+  storyImpressions: "Total views of Instagram Stories this period. Stories are often more immediate and action-driven than feed posts.",
+  engagementRate: "Total engagement (likes + comments + saves) as a percentage of reach. Industry benchmark for luxury brands is 1–3%. Above 1% is healthy; below 0.5% suggests content is not resonating.",
+  followerDemographics: "The age, gender and location breakdown of @hancocks_london's Instagram followers. Use this to check whether your social audience matches your actual client profile."
+};
+
+// Reusable: returns an ⓘ icon span for a TIPS key (empty string if no copy).
+function infoIcon(key) {
+  if (!TIPS[key]) return '';
+  return '<span class="info-icon" data-tip-key="' + key + '" tabindex="0" role="button" aria-label="More information">i</span>';
+}
+
+// Single shared tooltip, edge-aware, works on hover, keyboard focus and tap.
+(function initTooltips() {
+  const pop = document.createElement('div');
+  pop.className = 'tooltip-pop';
+  document.body.appendChild(pop);
+  let active = null;
+  function show(el) {
+    const txt = TIPS[el.getAttribute('data-tip-key')];
+    if (!txt) return;
+    pop.textContent = txt;
+    const tw = pop.offsetWidth, th = pop.offsetHeight;
+    const r = el.getBoundingClientRect();
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    let top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8;            // flip below if no room above
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    pop.classList.add('visible');
+    active = el;
+  }
+  function hide() { pop.classList.remove('visible'); active = null; }
+  document.addEventListener('mouseover', e => { const el = e.target.closest && e.target.closest('.info-icon'); if (el) show(el); });
+  document.addEventListener('mouseout', e => { const el = e.target.closest && e.target.closest('.info-icon'); if (el && !el.contains(e.relatedTarget)) hide(); });
+  document.addEventListener('focusin', e => { const el = e.target.closest && e.target.closest('.info-icon'); if (el) show(el); });
+  document.addEventListener('focusout', e => { const el = e.target.closest && e.target.closest('.info-icon'); if (el) hide(); });
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('.info-icon');
+    if (el) { e.preventDefault(); e.stopPropagation(); (active === el) ? hide() : show(el); }
+    else if (active) hide();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && active) hide(); });
+  window.addEventListener('scroll', () => { if (active) hide(); }, true);
+  window.addEventListener('resize', () => { if (active) hide(); });
+})();
+
 /* ------------------------------ Formatting ------------------------------- */
 function fmtNum(n) { return (Number(n) || 0).toLocaleString('en-GB'); }
 // Escape a string for safe use inside a double-quoted HTML attribute (e.g. title).
@@ -811,7 +936,7 @@ function renderConversions(d) {
     const ch = fmtChange(sc.changePct);
     return '<div class="scorecard">' +
       '<div class="scorecard-type ' + sc.type + '">' + sc.type + '</div>' +
-      '<div class="scorecard-label">' + sc.label + '</div>' +
+      '<div class="scorecard-label">' + sc.label + ' ' + infoIcon(sc.key) + '</div>' +
       '<div class="scorecard-value">' + fmtNum(sc.current) + '</div>' +
       '<div class="scorecard-meta"><span class="scorecard-period">' + state.window + ' days</span>' +
       '<span class="scorecard-change ' + ch.cls + '">' + ch.arrow + ' ' + ch.text + '</span></div></div>';
@@ -843,13 +968,22 @@ function renderTrendChart(trend) {
 
 /* ============================ Module 5 render ============================= */
 function renderBusiness(d) {
-  // Funnel
-  const f = d.funnel || {};
-  const rate = f.conversionPct === null || f.conversionPct === undefined ? '—' : Math.round(f.conversionPct * 100) + '%';
-  document.getElementById('funnel').innerHTML =
-    '<div class="funnel-stage"><div class="funnel-stage-val">' + fmtNum(f.enquiries) + '</div><div class="funnel-stage-label">Enquiries</div></div>' +
-    '<div class="funnel-arrow"><div class="rate">' + rate + '</div><div class="rate-label">convert →</div></div>' +
-    '<div class="funnel-stage"><div class="funnel-stage-val">' + fmtNum(f.appointments) + '</div><div class="funnel-stage-label">Appointments</div></div>';
+  // Direct Contact Actions — enquiries and appointments are INDEPENDENT actions
+  // (not a funnel), plus a combined total across all direct-contact channels.
+  const dc = d.directContact || {};
+  const enq = dc.enquiries || { current: 0, changePct: null };
+  const appt = dc.appointments || { current: 0, changePct: null };
+  const totCh = fmtChange(dc.totalChangePct);
+  document.getElementById('directContact').innerHTML =
+    '<div class="dc-pair">' +
+      dcCard('Enquiries', 'enquiriesCard', enq.current, fmtChange(enq.changePct), 'Product page enquiry form submissions') +
+      dcCard('Appointments', 'appointmentsCard', appt.current, fmtChange(appt.changePct), 'Appointment booking clicks across site') +
+    '</div>' +
+    '<div class="dc-total">' +
+      '<div class="dc-total-label">Total direct contact actions ' + infoIcon('directContact') + '</div>' +
+      '<div class="dc-total-right"><span class="dc-total-value">' + fmtNum(dc.total) + '</span>' +
+      '<span class="scorecard-change ' + totCh.cls + '">' + totCh.arrow + ' ' + totCh.text + '</span></div>' +
+    '</div>';
 
   // Channel split
   const cs = d.channelSplit || [];
@@ -878,6 +1012,14 @@ function miniMetric(label, value, ch, spark) {
     '<div class="label">' + label + '</div><div class="val">' + fmtNum(value) + '</div>' +
     '<span class="scorecard-change ' + ch.cls + '">' + ch.arrow + ' ' + ch.text + '</span></div>' +
     '<div style="width:120px">' + sparklineSvg(sparkVals, 120, 32) + '</div></div>';
+}
+// One independent contact-action card (Enquiries / Appointments).
+function dcCard(label, key, value, ch, sub) {
+  return '<div class="dc-card">' +
+    '<div class="dc-label">' + label + ' ' + infoIcon(key) + '</div>' +
+    '<div class="dc-value">' + fmtNum(value) + '</div>' +
+    '<div class="dc-sub">' + sub + '</div>' +
+    '<span class="scorecard-change ' + ch.cls + '">' + ch.arrow + ' ' + ch.text + '</span></div>';
 }
 function rollupRows(rows) {
   if (!rows || !rows.length) return '<tr><td colspan="3" class="muted">No data</td></tr>';
@@ -1296,8 +1438,12 @@ function gbpTile(label, val) {
 function renderInstagram(d) {
   const box = document.getElementById('instagram');
   const label = document.getElementById('instagramLabel');
-  // Hide the whole section until Instagram is connected.
-  if (!d || d.configured === false) { box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none'; return; }
+  // Hide the whole section (and demographics) until Instagram is connected.
+  if (!d || d.configured === false) {
+    box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none';
+    renderIgDemographics(null);
+    return;
+  }
   box.style.display = ''; label.style.display = '';
   const prof = d.profile && d.profile.ok ? d.profile.value : null;
   const reach = d.reach && d.reach.ok ? d.reach.value : [];
@@ -1306,20 +1452,36 @@ function renderInstagram(d) {
 
   let html = '<div class="hero-row">';
   html += '<div class="momentum-card">' +
-    '<div class="momentum-label">Followers' + (prof && prof.username ? ' · @' + prof.username : '') + '</div>' +
+    '<div class="momentum-label">Followers' + (prof && prof.username ? ' · @' + prof.username : '') + ' ' + infoIcon('igFollowers') + '</div>' +
     '<div class="momentum-value">' + (prof ? fmtNum(prof.followers) : '—') + '</div>' +
     '<div class="momentum-meta"><span class="scorecard-period">' + (prof ? fmtNum(prof.mediaCount) + ' posts' : '') + ' · Reach ' + fmtNum(reachTotal) + ' this period</span></div>' +
     '</div>';
-  html += '<div class="card"><div class="card-title">Follower Growth</div>' +
+  html += '<div class="card"><div class="card-title">Follower Growth ' + infoIcon('followerGrowth') + '</div>' +
     '<div class="card-subtitle">Daily followers across the window</div>' +
     '<div id="igFollowerBox"><div class="chart-wrap"><canvas id="igFollowerChart"></canvas></div></div></div>';
   html += '</div>';
 
-  html += '<div class="card"><div class="card-title">Top Posts</div>' +
-    '<div class="card-subtitle">Recent posts ranked by engagement</div>' +
+  // Stat tiles: Profile Visits, Website Clicks, Story Impressions, Engagement Rate.
+  html += '<div class="ig-stats">';
+  html += igStat('Profile Visits', 'profileVisits', d.profileVisits && d.profileVisits.ok ? fmtNum(d.profileVisits.value) : '—');
+  html += igStat('Website Clicks', 'websiteClicks', d.linkClicks && d.linkClicks.ok ? fmtNum(d.linkClicks.value) : '—');
+  const story = d.storyViews && d.storyViews.ok ? d.storyViews.value : null;
+  html += igStat('Story Impressions', 'storyImpressions',
+    story ? fmtNum(story.views) : '—',
+    story ? (story.count + ' active ' + (story.count === 1 ? 'story' : 'stories') + ' · live snapshot') : 'No active stories');
+  const er = (typeof d.engagementRate === 'number') ? d.engagementRate : null;
+  const erCls = er === null ? '' : (er > 1 ? 'er-good' : (er >= 0.5 ? 'er-mid' : 'er-low'));
+  html += igStat('Engagement Rate', 'engagementRate', er === null ? '—' : er.toFixed(2) + '%', null, erCls);
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-title">Top Posts ' + infoIcon('topPosts') + '</div>' +
+    '<div class="card-subtitle">Recent posts ranked by engagement (likes + comments + saves)</div>' +
     '<div id="igMediaBox"></div></div>';
 
   box.innerHTML = html;
+
+  // Follower demographics panel (separate section below).
+  renderIgDemographics(d.demographics);
 
   // Follower growth chart
   if (charts.igFollower) { charts.igFollower.destroy(); charts.igFollower = null; }
@@ -1344,13 +1506,77 @@ function renderInstagram(d) {
   if (!d.topMedia || !d.topMedia.ok) { mediaBox.innerHTML = ga4Unavailable(d.topMedia && d.topMedia.error); return; }
   const media = d.topMedia.value || [];
   if (!media.length) { mediaBox.innerHTML = '<div class="ga4-unavailable">No recent posts found.</div>'; return; }
-  mediaBox.innerHTML = '<table class="data-table"><thead><tr><th>Post</th><th style="text-align:right">Likes</th><th style="text-align:right">Comments</th><th style="text-align:right">Total</th></tr></thead><tbody>' +
+  mediaBox.innerHTML = '<table class="data-table"><thead><tr><th>Post</th><th style="text-align:right">Likes</th><th style="text-align:right">Comments</th><th style="text-align:right">Saves ' + infoIcon('saves') + '</th><th style="text-align:right">Total</th></tr></thead><tbody>' +
     media.map(m => {
       const when = m.timestamp ? new Date(m.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
       const cap = (m.caption || '(no caption)') + (when ? ' <span class="muted" style="font-size:10px">· ' + when + '</span>' : '');
       const link = m.permalink ? '<a href="' + m.permalink + '" target="_blank" rel="noopener" style="color:var(--gold-light);text-decoration:none">' + cap + '</a>' : cap;
-      return '<tr><td>' + link + '</td><td class="num">' + fmtNum(m.likes) + '</td><td class="num">' + fmtNum(m.comments) + '</td><td class="num">' + fmtNum(m.engagement) + '</td></tr>';
+      return '<tr><td>' + link + '</td><td class="num">' + fmtNum(m.likes) + '</td><td class="num">' + fmtNum(m.comments) + '</td><td class="num">' + fmtNum(m.saves) + '</td><td class="num">' + fmtNum(m.engagement) + '</td></tr>';
     }).join('') + '</tbody></table>';
+}
+
+// One Instagram stat tile.
+function igStat(label, key, valHtml, note, valCls) {
+  return '<div class="card ig-stat">' +
+    '<div class="ig-stat-label">' + label + ' ' + infoIcon(key) + '</div>' +
+    '<div class="ig-stat-val ' + (valCls || '') + '">' + valHtml + '</div>' +
+    (note ? '<div class="ig-stat-note">' + note + '</div>' : '') +
+    '</div>';
+}
+
+/* ------------------- Instagram follower demographics --------------------- */
+const AGE_ORDER = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+
+function renderIgDemographics(demo) {
+  const box = document.getElementById('igDemographics');
+  const label = document.getElementById('igDemographicsLabel');
+  const hide = () => { box.innerHTML = ''; box.style.display = 'none'; label.style.display = 'none'; };
+  if (!demo) return hide();
+  const age = demo.age && demo.age.ok ? demo.age.value : [];
+  const gender = demo.gender && demo.gender.ok ? demo.gender.value : [];
+  const cities = demo.cities && demo.cities.ok ? demo.cities.value : [];
+  if (!age.length && !gender.length && !cities.length) return hide();
+  box.style.display = ''; label.style.display = '';
+
+  // Age bars (canonical order, gold bars to match the day-of-week style).
+  const ageMap = {}; age.forEach(a => { ageMap[a.key] = a.value; });
+  const ageRows = AGE_ORDER.filter(k => ageMap[k] != null).map(k => ({ key: k, value: ageMap[k] }));
+  const ageMax = Math.max.apply(null, ageRows.map(r => r.value).concat([0]));
+  const ageHtml = ageRows.length
+    ? '<div class="dow-bars">' + ageRows.map(r => {
+        const pct = ageMax > 0 ? (r.value / ageMax * 100) : 0;
+        return '<div class="dow-bar-wrap"><div class="dow-val">' + fmtNum(r.value) + '</div>' +
+          '<div class="dow-bar" style="height:' + Math.max(4, pct) + '%"></div>' +
+          '<div class="dow-label">' + r.key + '</div></div>';
+      }).join('') + '</div>'
+    : '<div class="ga4-unavailable">No age data available.</div>';
+
+  // Gender split (male / female % of all followers).
+  const gMap = {}; gender.forEach(g => { gMap[(g.key || '').toUpperCase()] = g.value; });
+  const gTotal = (gMap.M || 0) + (gMap.F || 0) + (gMap.U || 0);
+  const fPct = gTotal > 0 ? Math.round((gMap.F || 0) / gTotal * 100) : null;
+  const mPct = gTotal > 0 ? Math.round((gMap.M || 0) / gTotal * 100) : null;
+  const genderHtml = gTotal > 0
+    ? '<div class="gender-split">' +
+        '<div class="gender-item"><div class="gender-pct">' + (fPct === null ? '—' : fPct + '%') + '</div><div class="gender-label">Female</div></div>' +
+        '<div class="gender-item"><div class="gender-pct">' + (mPct === null ? '—' : mPct + '%') + '</div><div class="gender-label">Male</div></div>' +
+      '</div>'
+    : '<div class="ga4-unavailable">No gender data available.</div>';
+
+  // Top 5 follower cities.
+  const topCities = cities.slice().sort((a, b) => b.value - a.value).slice(0, 5);
+  const cityMax = Math.max.apply(null, topCities.map(r => r.value).concat([0]));
+  const cityHtml = topCities.length
+    ? '<table class="data-table"><tbody>' + topCities.map(r =>
+        '<tr><td><span class="truncate-mobile" title="' + escapeAttr(r.key) + '">' + r.key + '</span>' + barCell(r.value, cityMax) + '</td><td class="num">' + fmtNum(r.value) + '</td></tr>'
+      ).join('') + '</tbody></table>'
+    : '<div class="ga4-unavailable">No city data available.</div>';
+
+  box.innerHTML = '<div class="grid-3">' +
+    '<div class="card"><div class="card-title">Age Range</div><div class="card-subtitle">Followers by age bracket</div>' + ageHtml + '</div>' +
+    '<div class="card"><div class="card-title">Gender Split</div><div class="card-subtitle">Share of followers</div>' + genderHtml + '</div>' +
+    '<div class="card"><div class="card-title">Top Follower Cities</div><div class="card-subtitle">Where your audience is based</div>' + cityHtml + '</div>' +
+    '</div>';
 }
 
 /* ------------------------------ Date toggle ------------------------------ */
