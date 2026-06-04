@@ -12,9 +12,17 @@
  * is written defensively and each call is wrapped (tryMeta_) — if a metric goes
  * away, that card degrades but the rest keep working. Long-lived tokens last
  * ~60 days; metaRefreshToken_() extends one before it lapses.
+ *
+ * Metric notes (current as of the 2025 v21/v22 changes):
+ *   - profile_views / website_clicks (time series) were DEPRECATED → use
+ *     profile_visits and profile_links_taps (metric_type=total_value).
+ *   - audience_city / audience_age_gender DEPRECATED → use follower_demographics
+ *     (metric_type=total_value, period=lifetime, breakdown=age|gender|city).
+ *   - story 'impressions' → 'views'; story insights exist only for ACTIVE
+ *     stories (last ~24h), so a period total is not available historically.
  */
 
-var META_BASE = 'https://graph.facebook.com/v21.0';
+var META_BASE = 'https://graph.facebook.com/v22.0';
 
 function metaToken_() { return getProp_('META_ACCESS_TOKEN'); }
 function metaIgId_() { return getProp_('IG_USER_ID'); }
@@ -48,6 +56,13 @@ function metaUnixRange_(windowDays) {
   return { since: until - windowDays * 86400, until: until };
 }
 
+/** Map a 7/30/90 window to the timeframe enum follower_demographics accepts. */
+function metaTimeframe_(windowDays) {
+  if (windowDays <= 14) return 'last_14_days';
+  if (windowDays <= 30) return 'last_30_days';
+  return 'last_90_days';
+}
+
 /** A daily insight metric (e.g. reach, follower_count) as [{date,value}]. */
 function metaDaySeries_(metric, windowDays) {
   var r = metaUnixRange_(windowDays);
@@ -60,24 +75,89 @@ function metaDaySeries_(metric, windowDays) {
   });
 }
 
-/** Recent media ranked by engagement (likes + comments). -> [{...}] */
+/**
+ * An aggregated account metric over the window using the newer total_value
+ * shape (e.g. profile_visits, profile_links_taps). Falls back to summing a time
+ * series if total_value isn't present. -> number
+ */
+function metaAccountTotalValue_(metric, windowDays, extra) {
+  var r = metaUnixRange_(windowDays);
+  var p = { metric: metric, metric_type: 'total_value', period: 'day', since: r.since, until: r.until };
+  if (extra) Object.keys(extra).forEach(function (k) { p[k] = extra[k]; });
+  var d = metaFetch_('/' + metaIgId_() + '/insights', p);
+  var node = d.data && d.data[0];
+  if (!node) return 0;
+  if (node.total_value && typeof node.total_value.value !== 'undefined') return node.total_value.value || 0;
+  return (node.values || []).reduce(function (a, v) { return a + (v.value || 0); }, 0);
+}
+
+/** Recent media ranked by engagement (likes + comments + saves). -> [{...}] */
 function metaTopMedia_(limit) {
-  var d = metaFetch_('/' + metaIgId_() + '/media', {
-    fields: 'caption,media_type,permalink,timestamp,like_count,comments_count',
-    limit: limit || 12
-  });
+  var base = 'caption,media_type,permalink,timestamp,like_count,comments_count';
+  var d;
+  // Try to pull 'saved' via field expansion; if a media type rejects it, fall
+  // back to the base fields so the posts table still renders.
+  try {
+    d = metaFetch_('/' + metaIgId_() + '/media', { fields: base + ',insights.metric(saved)', limit: limit || 12 });
+  } catch (e) {
+    d = metaFetch_('/' + metaIgId_() + '/media', { fields: base, limit: limit || 12 });
+  }
   var rows = (d.data || []).map(function (m) {
     var likes = m.like_count || 0, comments = m.comments_count || 0;
+    var saves = 0;
+    if (m.insights && m.insights.data) {
+      m.insights.data.forEach(function (it) {
+        if (it.name === 'saved') {
+          if (it.total_value && typeof it.total_value.value !== 'undefined') saves = it.total_value.value || 0;
+          else if (it.values && it.values[0]) saves = it.values[0].value || 0;
+        }
+      });
+    }
     return {
       caption: (m.caption || '').replace(/\s+/g, ' ').slice(0, 80),
       type: m.media_type || '',
       permalink: m.permalink || '',
       timestamp: m.timestamp || '',
-      likes: likes, comments: comments, engagement: likes + comments
+      likes: likes, comments: comments, saves: saves,
+      engagement: likes + comments + saves
     };
   });
   rows.sort(function (a, b) { return b.engagement - a.engagement; });
   return rows.slice(0, limit || 10);
+}
+
+/**
+ * Story views for currently-active stories (last ~24h). Story insights are not
+ * available historically, so this is a live snapshot. -> { views, count }
+ */
+function metaStoryViews_() {
+  var d = metaFetch_('/' + metaIgId_() + '/stories', { fields: 'id,media_type,timestamp,insights.metric(views)' });
+  var stories = d.data || [];
+  var total = 0;
+  stories.forEach(function (s) {
+    if (s.insights && s.insights.data) s.insights.data.forEach(function (it) {
+      if (it.total_value && typeof it.total_value.value !== 'undefined') total += it.total_value.value || 0;
+      else if (it.values && it.values[0]) total += it.values[0].value || 0;
+    });
+  });
+  return { views: total, count: stories.length };
+}
+
+/**
+ * Follower demographics by a single breakdown (age | gender | city).
+ * -> [{ key, value }]
+ */
+function metaFollowerDemographics_(windowDays, breakdown) {
+  var d = metaFetch_('/' + metaIgId_() + '/insights', {
+    metric: 'follower_demographics', period: 'lifetime', metric_type: 'total_value',
+    timeframe: metaTimeframe_(windowDays), breakdown: breakdown
+  });
+  var node = d.data && d.data[0];
+  var bd = node && node.total_value && node.total_value.breakdowns && node.total_value.breakdowns[0];
+  var results = (bd && bd.results) || [];
+  return results.map(function (r) {
+    return { key: (r.dimension_values || []).join(', '), value: r.value || 0 };
+  }).filter(function (x) { return x.key; });
 }
 
 /**

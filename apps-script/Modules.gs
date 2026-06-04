@@ -77,6 +77,20 @@ function buildBusinessModule_(params) {
   var channelSplit = ['whatsapp_click', 'phone_call_click', 'email_click', 'enquiry_click', 'appointment_click']
     .map(function (k) { return { key: k, label: byKey[k].label, current: byKey[k].current, previous: byKey[k].previous, changePct: byKey[k].changePct }; });
 
+  // Direct Contact Actions — enquiries and appointments are INDEPENDENT actions
+  // (a visitor can do either without the other), not a funnel. Plus a combined
+  // total across every direct-contact channel.
+  var directKeys = ['enquiry_click', 'appointment_click', 'whatsapp_click', 'phone_call_click', 'email_click'];
+  var dcCurrent = directKeys.reduce(function (a, k) { return a + (byKey[k].current || 0); }, 0);
+  var dcPrevious = directKeys.reduce(function (a, k) { return a + (byKey[k].previous || 0); }, 0);
+  var directContact = {
+    enquiries: byKey['enquiry_click'],
+    appointments: byKey['appointment_click'],
+    total: dcCurrent,
+    totalPrevious: dcPrevious,
+    totalChangePct: pctChange_(dcCurrent, dcPrevious)
+  };
+
   // Weekly + monthly rollups of the current window.
   var weekly = rollup_(windows.days, weekKey_);
   var monthly = rollup_(windows.days, function (key) { return key.slice(0, 7); });
@@ -85,7 +99,7 @@ function buildBusinessModule_(params) {
     source: 'sheet',
     soWhat: soWhat,
     momentum: momentum,
-    funnel: funnel,
+    directContact: directContact,
     channelSplit: channelSplit,
     share: byKey['share_click'],
     newsletter: byKey['newsletter_signup'],
@@ -314,13 +328,35 @@ function buildInstagramModule_(params) {
   if (!configured) {
     return { source: 'instagram', configured: false };
   }
+
+  var reach = tryMeta_(function () { return metaDaySeries_('reach', w); });
+  var topMedia = tryMeta_(function () { return metaTopMedia_(12); });
+
+  // Engagement rate = (likes + comments + saves) / reach × 100 for the period.
+  // Uses the recent media we already fetched as the engagement numerator.
+  var engagementRate = null;
+  if (topMedia.ok && reach.ok) {
+    var eng = topMedia.value.reduce(function (a, m) { return a + (m.likes || 0) + (m.comments || 0) + (m.saves || 0); }, 0);
+    var reachTotal = reach.value.reduce(function (a, p) { return a + (p.value || 0); }, 0);
+    engagementRate = reachTotal > 0 ? (eng / reachTotal * 100) : null;
+  }
+
   return {
     source: 'instagram',
     configured: true,
     profile: tryMeta_(function () { return metaProfile_(); }),
-    reach: tryMeta_(function () { return metaDaySeries_('reach', w); }),
+    reach: reach,
     followers: tryMeta_(function () { return metaDaySeries_('follower_count', w); }),
-    topMedia: tryMeta_(function () { return metaTopMedia_(8); })
+    topMedia: topMedia,
+    profileVisits: tryMeta_(function () { return metaAccountTotalValue_('profile_visits', w); }),
+    linkClicks: tryMeta_(function () { return metaAccountTotalValue_('profile_links_taps', w); }),
+    storyViews: tryMeta_(function () { return metaStoryViews_(); }),
+    engagementRate: engagementRate,
+    demographics: {
+      age: tryMeta_(function () { return metaFollowerDemographics_(w, 'age'); }),
+      gender: tryMeta_(function () { return metaFollowerDemographics_(w, 'gender'); }),
+      cities: tryMeta_(function () { return metaFollowerDemographics_(w, 'city'); })
+    }
   };
 }
 
