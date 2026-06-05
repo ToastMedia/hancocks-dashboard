@@ -334,6 +334,12 @@
   /* Catalogue product thumbnail in table name cells */
   .prod-name { display: inline-flex; align-items: center; vertical-align: middle; gap: 10px; max-width: 100%; }
   .prod-thumb { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 3px; object-fit: cover; background: rgba(201,168,76,0.06); border: 1px solid var(--gold-dim); }
+  /* Scrollable list (e.g. long site-search results) — capped height, dark scrollbar */
+  .scroll-list { max-height: 360px; overflow-y: auto; }
+  .scroll-list::-webkit-scrollbar { width: 8px; }
+  .scroll-list::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 4px; }
+  .scroll-list::-webkit-scrollbar-track { background: transparent; }
+  .scroll-list { scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
 
   /* Geographic Reach (promoted) callout */
   .geo-callout {
@@ -844,7 +850,8 @@ const TIPS = {
   productsMostEngaged: "Product pages where visitors spend the most time. A piece someone studies for minutes signals deeper interest than a quick glance. (Time reflects the session in which the page was viewed.)",
   productsScroll: "Product pages where visitors most often scrolled at least halfway down — a sign they're reading the detail, not just landing and leaving.",
   productsLowEnquiry: "Pieces getting lots of views but few or no enquiries. Attention without contact can point to pricing, photography or description quality worth reviewing.",
-  collectionPerformance: "Visits and engagement grouped by product category (from your Merchant Centre catalogue, where connected). Helps you see which ranges are resonating with visitors.",
+  collectionPerformance: "Visits and engagement grouped by product category (e.g. Rings, Tiaras, Brooches), so you can see which ranges are resonating with visitors.",
+  otherPages: "Your busiest pages that aren't individual products — listing pages, guides and content. Shows where attention goes on the site beyond the catalogue.",
   siteSearchTerms: "What visitors typed into the site's search bar this period. Repeated searches are direct demand signals — what people want and may not be finding."
 };
 
@@ -1061,8 +1068,6 @@ function renderProducts(d) {
     return;
   }
 
-  const catalogue = !!d.catalogueConfigured;
-
   // A product-name table cell (thumbnail when the catalogue has an image;
   // truncates cleanly on mobile).
   const nameCell = (name, pagePath, image) => {
@@ -1093,38 +1098,15 @@ function renderProducts(d) {
     prodTable(d.mostEngaged, 'avgDurationSec', asTime, 'Not enough volume to rank engagement yet.') + '</div>';
   html += '</div>';
 
-  // Scroll depth + High traffic / low enquiry
-  html += '<div class="grid-even-2">';
-  const scrollMsg = d.scrollAvailable ? 'No scroll-depth events on product pages this window.' : 'Scroll-depth data unavailable for this window.';
-  html += '<div class="card"><div class="card-title">Products Generating Scroll Depth ' + infoIcon('productsScroll') + '</div>' +
-    '<div class="card-subtitle">Pages with the most 50%-scroll events</div>' +
-    prodTable(d.scrollProducts, 'scrolls', asNum, scrollMsg) + '</div>';
-
-  html += '<div class="card"><div class="card-title">High Traffic / Low Enquiry ' + infoIcon('productsLowEnquiry') + '</div>' +
-    '<div class="card-subtitle">Top-20 by views with little or no enquiry contact</div>';
-  if (!d.enquiryAvailable) {
-    html += '<div class="ga4-unavailable">Enquiry-by-page data unavailable for this window.</div>';
-  } else if (!d.lowEnquiry || !d.lowEnquiry.length) {
-    html += '<div class="ga4-unavailable">Nothing flagged — your high-traffic products are all generating enquiries.</div>';
-  } else {
-    const max = Math.max.apply(null, d.lowEnquiry.map(r => r.views || 0).concat([0]));
-    html += '<table class="data-table"><thead><tr><th>Product</th><th style="text-align:right">Views</th><th style="text-align:right">Enquiries</th></tr></thead><tbody>' +
-      d.lowEnquiry.map(r =>
-        '<tr>' + nameCell(r.name, r.pagePath, r.image) + '<span class="flag-pill">watch</span>' + barCell(r.views || 0, max) + '</td>' +
-        '<td class="num">' + fmtNum(r.views) + '</td><td class="num">' + fmtNum(r.enquiries) + '</td></tr>'
-      ).join('') + '</tbody></table>';
-  }
-  html += '</div></div>';
-
-  // Collection performance + Site search terms
+  // Collection performance + Other high-traffic pages
   html += '<div class="grid-even-2">';
   html += '<div class="card"><div class="card-title">Collection Performance ' + infoIcon('collectionPerformance') + '</div>' +
-    '<div class="card-subtitle">Sessions &amp; engagement by ' + (catalogue ? 'Merchant Centre category' : 'collection') + '</div>';
+    '<div class="card-subtitle">Sessions &amp; engagement by product category</div>';
   if (!d.collections || !d.collections.length) {
     html += '<div class="ga4-unavailable">No collection data for this window.</div>';
   } else {
     const cMax = Math.max.apply(null, d.collections.map(c => c.sessions || 0).concat([0]));
-    html += '<table class="data-table"><thead><tr><th>Collection</th><th style="text-align:right">Sessions</th><th style="text-align:right">Avg time</th></tr></thead><tbody>' +
+    html += '<table class="data-table"><thead><tr><th>Category</th><th style="text-align:right">Sessions</th><th style="text-align:right">Avg time</th></tr></thead><tbody>' +
       d.collections.map(c =>
         '<tr><td><span class="truncate-mobile">' + c.collection + '</span>' + barCell(c.sessions || 0, cMax) + '</td>' +
         '<td class="num">' + fmtNum(c.sessions) + '</td><td class="num">' + fmtDuration(c.avgDurationSec) + '</td></tr>'
@@ -1132,6 +1114,12 @@ function renderProducts(d) {
   }
   html += '</div>';
 
+  html += '<div class="card"><div class="card-title">Other High-Traffic Pages ' + infoIcon('otherPages') + '</div>' +
+    '<div class="card-subtitle">Busiest non-product pages by views</div>' +
+    prodTable(d.otherPages, 'views', asNum, 'No non-product page data for this window.') + '</div>';
+  html += '</div>';
+
+  // Site search terms (full width, scrollable — the list can be long)
   html += '<div class="card"><div class="card-title">Site Search Terms ' + infoIcon('siteSearchTerms') + '</div>' +
     '<div class="card-subtitle">What visitors searched for on site</div>';
   const search = d.searchTerms;
@@ -1141,12 +1129,12 @@ function renderProducts(d) {
     html += '<div class="ga4-unavailable">No site searches recorded this window.</div>';
   } else {
     const sMax = Math.max.apply(null, search.value.map(s => s.count || 0).concat([0]));
-    html += '<table class="data-table"><tbody>' + search.value.map(s =>
+    html += '<div class="scroll-list"><table class="data-table"><tbody>' + search.value.map(s =>
       '<tr><td><span class="truncate-mobile" title="' + escapeAttr(s.term) + '">' + s.term + '</span>' + barCell(s.count || 0, sMax) + '</td>' +
       '<td class="num">' + fmtNum(s.count) + '</td></tr>'
-    ).join('') + '</tbody></table>';
+    ).join('') + '</tbody></table></div>';
   }
-  html += '</div></div>';
+  html += '</div>';
 
   box.innerHTML = html;
 }

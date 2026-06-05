@@ -426,6 +426,39 @@ function isProductPath_(pagePath, byPath) {
   return !NON_PRODUCT_PATHS[n];
 }
 
+/**
+ * Infer a product category from its name, for when the Merchant Centre feed
+ * doesn't carry productType/googleProductCategory. For jewellery the piece type
+ * is almost always in the title, so this yields useful buckets (Rings, Tiaras…).
+ */
+function categoryFromName_(name) {
+  var s = ' ' + String(name || '').toLowerCase() + ' ';
+  var rules = [
+    [/tiara/, 'Tiaras'],
+    [/brooch|hairpin|\bspray\b/, 'Brooches'],
+    [/necklace|rivi[eè]re/, 'Necklaces'],
+    [/pendant/, 'Pendants'],
+    [/earring|ear ?clip|\bstud/, 'Earrings'],
+    [/bracelet/, 'Bracelets'],
+    [/bangle/, 'Bangles'],
+    [/cuff ?link/, 'Cufflinks'],
+    [/locket/, 'Lockets'],
+    [/\bwatch|wristwatch/, 'Watches'],
+    [/\bmedal\b/, 'Medals'],
+    [/\brings?\b/, 'Rings'],
+    [/\bpin\b/, 'Pins']
+  ];
+  for (var i = 0; i < rules.length; i++) { if (rules[i][0].test(s)) return rules[i][1]; }
+  return 'Other';
+}
+
+/** Friendly label for a non-product page path ('/' -> Home). */
+function pageName_(pagePath) {
+  var n = normalizePath_(pagePath);
+  if (n === '/') return 'Home';
+  return slugToName_(n);
+}
+
 function buildProductsModule_(params) {
   var w = params.window;
 
@@ -440,8 +473,6 @@ function buildProductsModule_(params) {
     : 'Product names derived from page URLs — connect Merchant Centre for real titles, categories and images.';
 
   var pagesR = tryGa4_(function () { return ga4ProductPageMetrics_(w, 400); });
-  var scrollR = tryGa4_(function () { return ga4ProductEventMap_(w, 'scroll_50_product'); });
-  var enquiryR = tryGa4_(function () { return ga4ProductEventMap_(w, 'enquiry_click'); });
   var searchR = tryGa4_(function () { return ga4SiteSearchTerms_(w, 20); });
 
   if (!pagesR.ok) {
@@ -451,8 +482,17 @@ function buildProductsModule_(params) {
   // Catalogue-bound lookups (fall back to URL-derived when not in the feed).
   function nameFor(pp) { var e = byPath[normalizePath_(pp)]; return (e && e.title) ? e.title : slugToName_(pp); }
   function imageFor(pp) { var e = byPath[normalizePath_(pp)]; return (e && e.image) ? e.image : ''; }
-  function collectionFor(pp) { var e = byPath[normalizePath_(pp)]; return (e && e.collection) ? e.collection : 'Uncategorised'; }
-  function isProduct(pp) { return isProductPath_(pp, byPath); }
+  function collectionFor(pp) {
+    var e = byPath[normalizePath_(pp)];
+    var c = (e && e.collection) ? e.collection : '';
+    return c || categoryFromName_(nameFor(pp));   // infer from name when feed has no category
+  }
+  // When the catalogue is connected it's the source of truth for "is a product";
+  // otherwise fall back to the URL heuristic.
+  function isProduct(pp) {
+    if (catalogue) return !!byPath[normalizePath_(pp)];
+    return isProductPath_(pp, byPath);
+  }
   function row(p, extra) {
     var r = { name: nameFor(p.pagePath), pagePath: p.pagePath, image: imageFor(p.pagePath) };
     for (var k in extra) { if (extra.hasOwnProperty(k)) r[k] = extra[k]; }
@@ -460,8 +500,11 @@ function buildProductsModule_(params) {
   }
 
   var pages = pagesR.value.filter(function (p) { return isProduct(p.pagePath); });
-  var scroll = scrollR.ok ? scrollR.value : {};
-  var enquiry = enquiryR.ok ? enquiryR.value : {};
+
+  // High-traffic pages that aren't products (listing / content / info pages).
+  var otherPages = pagesR.value.filter(function (p) { return !isProduct(p.pagePath); })
+    .sort(function (a, b) { return b.views - a.views; }).slice(0, 12)
+    .map(function (p) { return { name: pageName_(p.pagePath), pagePath: p.pagePath, sessions: p.sessions, views: p.views }; });
 
   // Most viewed (by sessions).
   var mostViewed = pages.slice().sort(function (a, b) { return b.sessions - a.sessions; }).slice(0, 10)
@@ -472,19 +515,8 @@ function buildProductsModule_(params) {
     .sort(function (a, b) { return b.avgDurationSec - a.avgDurationSec; }).slice(0, 10)
     .map(function (p) { return row(p, { avgDurationSec: p.avgDurationSec, sessions: p.sessions }); });
 
-  // Products generating scroll depth (restrict the event map to product paths).
-  var scrollProducts = Object.keys(scroll).filter(isProduct).map(function (pp) {
-    return { name: nameFor(pp), pagePath: pp, image: imageFor(pp), scrolls: scroll[pp] };
-  }).sort(function (a, b) { return b.scrolls - a.scrolls; }).slice(0, 10);
-
-  // High traffic / low enquiry: top 20 by views with <=1 enquiry.
-  var top20 = pages.slice().sort(function (a, b) { return b.views - a.views; }).slice(0, 20);
-  var lowEnquiry = top20.map(function (p) {
-    return row(p, { views: p.views, sessions: p.sessions, enquiries: enquiry[p.pagePath] || 0 });
-  }).filter(function (p) { return p.enquiries <= 1; }).slice(0, 10);
-
   // Collection performance (sessions + sessions-weighted avg engagement),
-  // grouped by Merchant Centre category.
+  // grouped by product category.
   var colMap = {};
   pages.forEach(function (p) {
     var key = collectionFor(p.pagePath);
@@ -506,11 +538,8 @@ function buildProductsModule_(params) {
     catalogueError: catalogueError,
     mostViewed: mostViewed,
     mostEngaged: mostEngaged,
-    scrollProducts: scrollProducts,
-    scrollAvailable: scrollR.ok,
-    lowEnquiry: lowEnquiry,
-    enquiryAvailable: enquiryR.ok,
     collections: collections,
+    otherPages: otherPages,
     searchTerms: searchR
   };
 }
