@@ -51,7 +51,7 @@ clasp login                                   # opens your browser
 # Create a standalone project (one time):
 clasp create --type standalone --title "Hancocks London Dashboard"
 # clasp writes a .clasp.json — set "rootDir" to "apps-script" (see example file),
-# then push everything in apps-script/ (the 7 .gs files + appsscript.json):
+# then push everything in apps-script/ (the .gs files + appsscript.json):
 clasp push -f
 clasp open                                     # opens the project in the editor
 ```
@@ -198,6 +198,34 @@ app and a long-lived token (no Google scope involved).
 7. Refresh the dashboard → the Instagram section populates (followers, reach,
    follower growth, top posts). Meta renames insight metrics often, so we may
    tweak `MetaProvider` against the first live response.
+
+## Google Merchant Centre (Product catalogue) — enrich Product Intelligence
+
+The `GMCProvider` joins your Merchant Centre catalogue to the GA4 page data so
+the Product Intelligence section uses **real product titles, categories and
+images** — and detects products authoritatively (a GA4 page is a product if
+it's in the catalogue, or a root-level slug that isn't a known non-product
+page). It's **inert until `GMC_MERCHANT_ID` is set**, so nothing breaks before
+setup; until then the section falls back to URL-derived names.
+
+1. **Enable the API.** Cloud Console → APIs & Services → Library → enable
+   **Content API for Shopping** in project **`217450833455`**.
+2. **Authorise the new scope.** The manifest now declares
+   `https://www.googleapis.com/auth/content`, so after `clasp push -f` run any
+   function in the editor (e.g. `doGet`) and **re-Allow** the permissions, then
+   cut a **new deployment version**.
+3. **Find your Merchant ID.** [merchants.google.com](https://merchants.google.com)
+   → top-right under the account name (or Settings → Account). For Hancocks
+   this is **`282062848`**.
+4. **Set `GMC_MERCHANT_ID`** (that number) in Script Properties.
+5. Refresh the dashboard → product names, categories and thumbnails populate.
+   The catalogue is cached for 6h, so the first load after a feed change can lag.
+
+**The join:** Hancocks' product pages are flat root-level slugs
+(`hancockslondon.com/4-06ct-elongated-asscher-diamond-platinum-ring`), and the
+catalogue `link` uses the same URLs, so GA4 `pagePath` ↔ catalogue `link` is a
+clean 1:1 match on path. If the feed's `link` ever changes to canonical/variant
+URLs, the path normaliser in `GMCProvider.normalizePath_` is where to adjust.
 
 ## Phase 2 note (not now)
 Site-search **terms** only return from GA4 if `search_term` is registered as a

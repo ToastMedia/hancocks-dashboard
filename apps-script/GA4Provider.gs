@@ -295,19 +295,12 @@ function ga4AiReferralDetail_(windowDays) {
 /* ----------------------- Product Intelligence ---------------------------- */
 
 /**
- * Filter limiting a report to product pages — paths containing /jewellery/,
- * /engagement/ or /wedding/.
- */
-function ga4ProductFilter_() {
-  return { orGroup: { expressions: [
-    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/jewellery/' } } },
-    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/engagement/' } } },
-    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/wedding/' } } }
-  ] } };
-}
-
-/**
- * Per-product-page metrics. -> [{ pagePath, sessions, views, avgDurationSec }]
+ * Per-page metrics for the top pages by views. Product detection happens
+ * downstream (Modules.buildProductsModule_) by joining these paths to the
+ * Merchant Centre catalogue and excluding known non-product paths — Hancocks'
+ * products are flat root-level slugs, so a URL-pattern filter here would miss
+ * them. -> [{ pagePath, sessions, views, avgDurationSec }]
+ *
  * NB: averageSessionDuration is session-scoped, so against pagePath it reads as
  * "avg duration of sessions that viewed this page" — a sound proxy for time on
  * product (the UI tooltip says as much).
@@ -317,9 +310,8 @@ function ga4ProductPageMetrics_(windowDays, limit) {
     dateRanges: [ga4DateRange_(windowDays)],
     dimensions: [{ name: 'pagePath' }],
     metrics: [{ name: 'sessions' }, { name: 'screenPageViews' }, { name: 'averageSessionDuration' }],
-    dimensionFilter: ga4ProductFilter_(),
     orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-    limit: limit || 100
+    limit: limit || 400
   });
   return ga4Rows_(rep).map(function (r) {
     return { pagePath: r.dims[0] || '', sessions: r.mets[0], views: r.mets[1], avgDurationSec: r.mets[2] };
@@ -327,20 +319,18 @@ function ga4ProductPageMetrics_(windowDays, limit) {
 }
 
 /**
- * Count of a given event by product page. -> { pagePath: eventCount }
- * Used for scroll_50_product and enquiry_click per product.
+ * Count of a given event by page. -> { pagePath: eventCount }
+ * Used for scroll_50_product and enquiry_click; the module filters these to
+ * product paths via the catalogue + exclusion list.
  */
 function ga4ProductEventMap_(windowDays, eventName) {
   var rep = ga4RunReport_({
     dateRanges: [ga4DateRange_(windowDays)],
     dimensions: [{ name: 'pagePath' }],
     metrics: [{ name: 'eventCount' }],
-    dimensionFilter: { andGroup: { expressions: [
-      ga4ProductFilter_(),
-      { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: eventName } } }
-    ] } },
+    dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: eventName } } },
     orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-    limit: 200
+    limit: 400
   });
   var map = {};
   ga4Rows_(rep).forEach(function (r) { map[r.dims[0] || ''] = r.mets[0]; });

@@ -328,9 +328,12 @@
   /* Italic contextual caption (e.g. new-vs-returning note) */
   .caption-note { font-size: 11px; font-style: italic; color: var(--text-muted); line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(42,42,42,0.5); }
 
-  /* Product Intelligence "derived from URLs" note + low-enquiry flag accent */
+  /* Product Intelligence provenance note + low-enquiry flag accent */
   .product-note { font-size: 11px; font-style: italic; color: var(--text-dim); margin: -8px 0 16px; }
   .flag-pill { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red); border: 1px solid rgba(224,90,90,0.4); padding: 1px 6px; border-radius: 2px; margin-left: 6px; }
+  /* Catalogue product thumbnail in table name cells */
+  .prod-name { display: inline-flex; align-items: center; vertical-align: middle; gap: 10px; max-width: 100%; }
+  .prod-thumb { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 3px; object-fit: cover; background: rgba(201,168,76,0.06); border: 1px solid var(--gold-dim); }
 
   /* Geographic Reach (promoted) callout */
   .geo-callout {
@@ -505,7 +508,7 @@
 
     <!-- Product Intelligence (GA4 page-level) — stock / design / demand signals -->
     <div class="section-label" style="margin-top:32px">Product Intelligence &nbsp;<span class="pill">GA4</span></div>
-    <div class="product-note">Product names derived from page URLs — exact formatting may vary.</div>
+    <div class="product-note" id="productNote">Product names derived from page URLs — exact formatting may vary.</div>
     <div id="productIntel"></div>
 
     <!-- Geographic Reach (promoted — strategically important for Hancocks) -->
@@ -841,7 +844,7 @@ const TIPS = {
   productsMostEngaged: "Product pages where visitors spend the most time. A piece someone studies for minutes signals deeper interest than a quick glance. (Time reflects the session in which the page was viewed.)",
   productsScroll: "Product pages where visitors most often scrolled at least halfway down — a sign they're reading the detail, not just landing and leaving.",
   productsLowEnquiry: "Pieces getting lots of views but few or no enquiries. Attention without contact can point to pricing, photography or description quality worth reviewing.",
-  collectionPerformance: "Visits and engagement grouped by collection or category, derived from the page URLs. Helps you see which ranges are resonating with visitors.",
+  collectionPerformance: "Visits and engagement grouped by product category (from your Merchant Centre catalogue, where connected). Helps you see which ranges are resonating with visitors.",
   siteSearchTerms: "What visitors typed into the site's search bar this period. Repeated searches are direct demand signals — what people want and may not be finding."
 };
 
@@ -1045,21 +1048,35 @@ function rollupRows(rows) {
 /* ===================== Product Intelligence render ====================== */
 function renderProducts(d) {
   const box = document.getElementById('productIntel');
+  const noteEl = document.getElementById('productNote');
+  if (noteEl && d) {
+    if (d.catalogueError) {
+      noteEl.textContent = 'Merchant Centre is connected but not returning data yet — check the Content API is enabled and the catalogue scope is authorised. Showing URL-derived names meanwhile.';
+    } else if (d.note) {
+      noteEl.textContent = d.note;
+    }
+  }
   if (!d || d.available === false) {
     box.innerHTML = '<div class="card">' + ga4Unavailable(d && d.error) + '</div>';
     return;
   }
 
-  // A product-name table cell (truncates cleanly on mobile).
-  const nameCell = (name, pagePath) =>
-    '<td><span class="truncate-mobile" title="' + escapeAttr(pagePath || name) + '">' + name + '</span>';
+  const catalogue = !!d.catalogueConfigured;
+
+  // A product-name table cell (thumbnail when the catalogue has an image;
+  // truncates cleanly on mobile).
+  const nameCell = (name, pagePath, image) => {
+    const thumb = image ? '<img class="prod-thumb" src="' + escapeAttr(image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '';
+    return '<td><span class="prod-name">' + thumb +
+      '<span class="truncate-mobile" title="' + escapeAttr(pagePath || name) + '">' + name + '</span></span>';
+  };
 
   // Generic ranked product table: rows -> [{name,pagePath,<valueField>}]
   function prodTable(rows, valueField, fmt, emptyMsg) {
     if (!rows || !rows.length) return '<div class="ga4-unavailable">' + (emptyMsg || 'No data for this window.') + '</div>';
     const max = Math.max.apply(null, rows.map(r => r[valueField] || 0).concat([0]));
     return '<table class="data-table"><tbody>' + rows.map(r =>
-      '<tr>' + nameCell(r.name, r.pagePath) + barCell(r[valueField] || 0, max) + '</td>' +
+      '<tr>' + nameCell(r.name, r.pagePath, r.image) + barCell(r[valueField] || 0, max) + '</td>' +
       '<td class="num">' + fmt(r[valueField]) + '</td></tr>'
     ).join('') + '</tbody></table>';
   }
@@ -1093,7 +1110,7 @@ function renderProducts(d) {
     const max = Math.max.apply(null, d.lowEnquiry.map(r => r.views || 0).concat([0]));
     html += '<table class="data-table"><thead><tr><th>Product</th><th style="text-align:right">Views</th><th style="text-align:right">Enquiries</th></tr></thead><tbody>' +
       d.lowEnquiry.map(r =>
-        '<tr>' + nameCell(r.name, r.pagePath) + '<span class="flag-pill">watch</span>' + barCell(r.views || 0, max) + '</td>' +
+        '<tr>' + nameCell(r.name, r.pagePath, r.image) + '<span class="flag-pill">watch</span>' + barCell(r.views || 0, max) + '</td>' +
         '<td class="num">' + fmtNum(r.views) + '</td><td class="num">' + fmtNum(r.enquiries) + '</td></tr>'
       ).join('') + '</tbody></table>';
   }
@@ -1102,7 +1119,7 @@ function renderProducts(d) {
   // Collection performance + Site search terms
   html += '<div class="grid-even-2">';
   html += '<div class="card"><div class="card-title">Collection Performance ' + infoIcon('collectionPerformance') + '</div>' +
-    '<div class="card-subtitle">Sessions &amp; engagement by collection (from URLs)</div>';
+    '<div class="card-subtitle">Sessions &amp; engagement by ' + (catalogue ? 'Merchant Centre category' : 'collection') + '</div>';
   if (!d.collections || !d.collections.length) {
     html += '<div class="ga4-unavailable">No collection data for this window.</div>';
   } else {
