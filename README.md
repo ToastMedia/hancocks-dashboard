@@ -25,6 +25,9 @@ Apps Script Web App  ── THE security boundary ──
   Providers:
     SheetProvider.gs   reads the PRIVATE Google Sheet (6 tabs, event-count data)
     GA4Provider.gs     GA4 Data API runReport (sessions, pages, durations)
+    GBPProvider.gs     Google Business Profile (local visibility)
+    MetaProvider.gs    Instagram (Meta Graph API)
+    GMCProvider.gs     Merchant Centre catalogue (product titles, categories, images)
 ```
 
 ### Security model (read this)
