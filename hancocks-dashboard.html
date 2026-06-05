@@ -1051,7 +1051,7 @@ function renderProducts(d) {
   const noteEl = document.getElementById('productNote');
   if (noteEl && d) {
     if (d.catalogueError) {
-      noteEl.textContent = 'Merchant Centre is connected but not returning data yet — check the Content API is enabled and the catalogue scope is authorised. Showing URL-derived names meanwhile.';
+      noteEl.textContent = 'Merchant Centre is connected but not returning data yet — check the Merchant API is enabled and the catalogue scope is authorised. Showing URL-derived names meanwhile.';
     } else if (d.note) {
       noteEl.textContent = d.note;
     }
