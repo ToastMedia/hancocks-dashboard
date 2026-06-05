@@ -291,3 +291,77 @@ function ga4AiReferralDetail_(windowDays) {
 
   return { totals: totals, bySource: bySource, landingPages: landingPages, trend: trend, newVsReturning: newVsReturning };
 }
+
+/* ----------------------- Product Intelligence ---------------------------- */
+
+/**
+ * Filter limiting a report to product pages — paths containing /jewellery/,
+ * /engagement/ or /wedding/.
+ */
+function ga4ProductFilter_() {
+  return { orGroup: { expressions: [
+    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/jewellery/' } } },
+    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/engagement/' } } },
+    { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'CONTAINS', value: '/wedding/' } } }
+  ] } };
+}
+
+/**
+ * Per-product-page metrics. -> [{ pagePath, sessions, views, avgDurationSec }]
+ * NB: averageSessionDuration is session-scoped, so against pagePath it reads as
+ * "avg duration of sessions that viewed this page" — a sound proxy for time on
+ * product (the UI tooltip says as much).
+ */
+function ga4ProductPageMetrics_(windowDays, limit) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'pagePath' }],
+    metrics: [{ name: 'sessions' }, { name: 'screenPageViews' }, { name: 'averageSessionDuration' }],
+    dimensionFilter: ga4ProductFilter_(),
+    orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+    limit: limit || 100
+  });
+  return ga4Rows_(rep).map(function (r) {
+    return { pagePath: r.dims[0] || '', sessions: r.mets[0], views: r.mets[1], avgDurationSec: r.mets[2] };
+  });
+}
+
+/**
+ * Count of a given event by product page. -> { pagePath: eventCount }
+ * Used for scroll_50_product and enquiry_click per product.
+ */
+function ga4ProductEventMap_(windowDays, eventName) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'pagePath' }],
+    metrics: [{ name: 'eventCount' }],
+    dimensionFilter: { andGroup: { expressions: [
+      ga4ProductFilter_(),
+      { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: eventName } } }
+    ] } },
+    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+    limit: 200
+  });
+  var map = {};
+  ga4Rows_(rep).forEach(function (r) { map[r.dims[0] || ''] = r.mets[0]; });
+  return map;
+}
+
+/**
+ * Top on-site search terms. -> [{ term, count }]
+ * Requires GA4 site-search (enhanced measurement) or a registered search_term
+ * custom dimension to populate `searchTerm`; returns [] if not configured.
+ */
+function ga4SiteSearchTerms_(windowDays, limit) {
+  var rep = ga4RunReport_({
+    dateRanges: [ga4DateRange_(windowDays)],
+    dimensions: [{ name: 'searchTerm' }],
+    metrics: [{ name: 'eventCount' }],
+    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+    limit: (limit || 20) + 5
+  });
+  return ga4Rows_(rep)
+    .map(function (r) { return { term: r.dims[0] || '', count: r.mets[0] }; })
+    .filter(function (x) { return x.term && x.term !== '(not set)'; })
+    .slice(0, limit || 20);
+}

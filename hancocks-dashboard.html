@@ -328,6 +328,10 @@
   /* Italic contextual caption (e.g. new-vs-returning note) */
   .caption-note { font-size: 11px; font-style: italic; color: var(--text-muted); line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(42,42,42,0.5); }
 
+  /* Product Intelligence "derived from URLs" note + low-enquiry flag accent */
+  .product-note { font-size: 11px; font-style: italic; color: var(--text-dim); margin: -8px 0 16px; }
+  .flag-pill { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--red); border: 1px solid rgba(224,90,90,0.4); padding: 1px 6px; border-radius: 2px; margin-left: 6px; }
+
   /* Geographic Reach (promoted) callout */
   .geo-callout {
     background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.03));
@@ -498,6 +502,11 @@
         </table>
       </div>
     </div>
+
+    <!-- Product Intelligence (GA4 page-level) — stock / design / demand signals -->
+    <div class="section-label" style="margin-top:32px">Product Intelligence &nbsp;<span class="pill">GA4</span></div>
+    <div class="product-note">Product names derived from page URLs — exact formatting may vary.</div>
+    <div id="productIntel"></div>
 
     <!-- Geographic Reach (promoted — strategically important for Hancocks) -->
     <div class="section-label" style="margin-top:32px">Geographic Reach &nbsp;<span class="pill">GA4</span> <span class="info-icon" data-tip-key="geo" tabindex="0" role="button" aria-label="More information">i</span></div>
@@ -743,6 +752,7 @@ async function loadAll() {
   const modules = [
     ['conversions', renderConversions],
     ['business', renderBusiness],
+    ['products', renderProducts],
     ['traffic', renderTraffic],
     ['audience', renderAudience],
     ['localvisibility', renderLocalVisibility],
@@ -826,7 +836,13 @@ const TIPS = {
   websiteClicks: "Clicks on the link in the @hancocks_london bio. The most direct measure of Instagram driving website traffic.",
   storyImpressions: "Total views of Instagram Stories this period. Stories are often more immediate and action-driven than feed posts.",
   engagementRate: "Total engagement (likes + comments + saves) as a percentage of reach. Industry benchmark for luxury brands is 1–3%. Above 1% is healthy; below 0.5% suggests content is not resonating.",
-  followerDemographics: "The age, gender and location breakdown of @hancocks_london's Instagram followers. Use this to check whether your social audience matches your actual client profile."
+  followerDemographics: "The age, gender and location breakdown of @hancocks_london's Instagram followers. Use this to check whether your social audience matches your actual client profile.",
+  productsMostViewed: "Your most visited product pages this period, by number of visits. Shows which individual pieces are drawing the most attention online.",
+  productsMostEngaged: "Product pages where visitors spend the most time. A piece someone studies for minutes signals deeper interest than a quick glance. (Time reflects the session in which the page was viewed.)",
+  productsScroll: "Product pages where visitors most often scrolled at least halfway down — a sign they're reading the detail, not just landing and leaving.",
+  productsLowEnquiry: "Pieces getting lots of views but few or no enquiries. Attention without contact can point to pricing, photography or description quality worth reviewing.",
+  collectionPerformance: "Visits and engagement grouped by collection or category, derived from the page URLs. Helps you see which ranges are resonating with visitors.",
+  siteSearchTerms: "What visitors typed into the site's search bar this period. Repeated searches are direct demand signals — what people want and may not be finding."
 };
 
 // Reusable: returns an ⓘ icon span for a TIPS key (empty string if no copy).
@@ -1024,6 +1040,98 @@ function dcCard(label, key, value, ch, sub) {
 function rollupRows(rows) {
   if (!rows || !rows.length) return '<tr><td colspan="3" class="muted">No data</td></tr>';
   return rows.map(r => '<tr><td>' + r.period + '</td><td class="num">' + fmtNum(r.conversions) + '</td><td class="num">' + fmtNum(r.engagement) + '</td></tr>').join('');
+}
+
+/* ===================== Product Intelligence render ====================== */
+function renderProducts(d) {
+  const box = document.getElementById('productIntel');
+  if (!d || d.available === false) {
+    box.innerHTML = '<div class="card">' + ga4Unavailable(d && d.error) + '</div>';
+    return;
+  }
+
+  // A product-name table cell (truncates cleanly on mobile).
+  const nameCell = (name, pagePath) =>
+    '<td><span class="truncate-mobile" title="' + escapeAttr(pagePath || name) + '">' + name + '</span>';
+
+  // Generic ranked product table: rows -> [{name,pagePath,<valueField>}]
+  function prodTable(rows, valueField, fmt, emptyMsg) {
+    if (!rows || !rows.length) return '<div class="ga4-unavailable">' + (emptyMsg || 'No data for this window.') + '</div>';
+    const max = Math.max.apply(null, rows.map(r => r[valueField] || 0).concat([0]));
+    return '<table class="data-table"><tbody>' + rows.map(r =>
+      '<tr>' + nameCell(r.name, r.pagePath) + barCell(r[valueField] || 0, max) + '</td>' +
+      '<td class="num">' + fmt(r[valueField]) + '</td></tr>'
+    ).join('') + '</tbody></table>';
+  }
+  const asNum = v => fmtNum(v);
+  const asTime = v => fmtDuration(v);
+
+  // Most viewed (sessions) + Most engaged (avg time)
+  let html = '<div class="grid-even-2">';
+  html += '<div class="card"><div class="card-title">Most Viewed Products ' + infoIcon('productsMostViewed') + '</div>' +
+    '<div class="card-subtitle">Top product pages by sessions</div>' +
+    prodTable(d.mostViewed, 'sessions', asNum, 'No product-page data for this window.') + '</div>';
+  html += '<div class="card"><div class="card-title">Most Engaged Products ' + infoIcon('productsMostEngaged') + '</div>' +
+    '<div class="card-subtitle">Product pages by average time</div>' +
+    prodTable(d.mostEngaged, 'avgDurationSec', asTime, 'Not enough volume to rank engagement yet.') + '</div>';
+  html += '</div>';
+
+  // Scroll depth + High traffic / low enquiry
+  html += '<div class="grid-even-2">';
+  const scrollMsg = d.scrollAvailable ? 'No scroll-depth events on product pages this window.' : 'Scroll-depth data unavailable for this window.';
+  html += '<div class="card"><div class="card-title">Products Generating Scroll Depth ' + infoIcon('productsScroll') + '</div>' +
+    '<div class="card-subtitle">Pages with the most 50%-scroll events</div>' +
+    prodTable(d.scrollProducts, 'scrolls', asNum, scrollMsg) + '</div>';
+
+  html += '<div class="card"><div class="card-title">High Traffic / Low Enquiry ' + infoIcon('productsLowEnquiry') + '</div>' +
+    '<div class="card-subtitle">Top-20 by views with little or no enquiry contact</div>';
+  if (!d.enquiryAvailable) {
+    html += '<div class="ga4-unavailable">Enquiry-by-page data unavailable for this window.</div>';
+  } else if (!d.lowEnquiry || !d.lowEnquiry.length) {
+    html += '<div class="ga4-unavailable">Nothing flagged — your high-traffic products are all generating enquiries.</div>';
+  } else {
+    const max = Math.max.apply(null, d.lowEnquiry.map(r => r.views || 0).concat([0]));
+    html += '<table class="data-table"><thead><tr><th>Product</th><th style="text-align:right">Views</th><th style="text-align:right">Enquiries</th></tr></thead><tbody>' +
+      d.lowEnquiry.map(r =>
+        '<tr>' + nameCell(r.name, r.pagePath) + '<span class="flag-pill">watch</span>' + barCell(r.views || 0, max) + '</td>' +
+        '<td class="num">' + fmtNum(r.views) + '</td><td class="num">' + fmtNum(r.enquiries) + '</td></tr>'
+      ).join('') + '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  // Collection performance + Site search terms
+  html += '<div class="grid-even-2">';
+  html += '<div class="card"><div class="card-title">Collection Performance ' + infoIcon('collectionPerformance') + '</div>' +
+    '<div class="card-subtitle">Sessions &amp; engagement by collection (from URLs)</div>';
+  if (!d.collections || !d.collections.length) {
+    html += '<div class="ga4-unavailable">No collection data for this window.</div>';
+  } else {
+    const cMax = Math.max.apply(null, d.collections.map(c => c.sessions || 0).concat([0]));
+    html += '<table class="data-table"><thead><tr><th>Collection</th><th style="text-align:right">Sessions</th><th style="text-align:right">Avg time</th></tr></thead><tbody>' +
+      d.collections.map(c =>
+        '<tr><td><span class="truncate-mobile">' + c.collection + '</span>' + barCell(c.sessions || 0, cMax) + '</td>' +
+        '<td class="num">' + fmtNum(c.sessions) + '</td><td class="num">' + fmtDuration(c.avgDurationSec) + '</td></tr>'
+      ).join('') + '</tbody></table>';
+  }
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-title">Site Search Terms ' + infoIcon('siteSearchTerms') + '</div>' +
+    '<div class="card-subtitle">What visitors searched for on site</div>';
+  const search = d.searchTerms;
+  if (!search || !search.ok) {
+    html += '<div class="ga4-unavailable">Site-search terms aren\'t available yet. They need GA4 site-search (enhanced measurement) or a registered <span class="muted">search_term</span> custom dimension.</div>';
+  } else if (!search.value || !search.value.length) {
+    html += '<div class="ga4-unavailable">No site searches recorded this window.</div>';
+  } else {
+    const sMax = Math.max.apply(null, search.value.map(s => s.count || 0).concat([0]));
+    html += '<table class="data-table"><tbody>' + search.value.map(s =>
+      '<tr><td><span class="truncate-mobile" title="' + escapeAttr(s.term) + '">' + s.term + '</span>' + barCell(s.count || 0, sMax) + '</td>' +
+      '<td class="num">' + fmtNum(s.count) + '</td></tr>'
+    ).join('') + '</tbody></table>';
+  }
+  html += '</div></div>';
+
+  box.innerHTML = html;
 }
 
 /* ============================ Module 2 render ============================= */

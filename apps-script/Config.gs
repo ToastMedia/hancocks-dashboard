@@ -83,5 +83,6 @@ var MODULES = {
   audience:    function (params) { return buildAudienceModule_(params); },    // Module 3 slice (sheet) + GA4
   traffic:     function (params) { return buildTrafficModule_(params); },     // Module 2 slice (sheet) + GA4
   localvisibility: function (params) { return buildLocalVisibilityModule_(params); }, // Google Business Profile
-  instagram:   function (params) { return buildInstagramModule_(params); }    // Instagram (Meta Graph API)
+  instagram:   function (params) { return buildInstagramModule_(params); },   // Instagram (Meta Graph API)
+  products:    function (params) { return buildProductsModule_(params); }     // Product Intelligence (GA4 page-level)
 };

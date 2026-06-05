@@ -379,3 +379,92 @@ function aggregateBy_(rows, dimCol, convCol, engCol) {
 function topRows_(rows, field, n) {
   return rows.slice().sort(function (a, b) { return (b[field] || 0) - (a[field] || 0); }).slice(0, n);
 }
+
+/* ====================== Product Intelligence (GA4) ======================= */
+
+/** Turn a product page path into a readable name. */
+function slugToName_(pagePath) {
+  var p = String(pagePath || '').split('?')[0].split('#')[0].replace(/\/+$/, '');
+  var seg = p.split('/').filter(function (s) { return s; }).pop() || p;
+  seg = seg.replace(/[-_]+/g, ' ').trim();
+  var name = seg.replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  return name || pagePath;
+}
+
+/** Derive a collection/category key from a product URL's structure. */
+function productCollection_(pagePath) {
+  var segs = String(pagePath || '').split('?')[0].split('/').filter(function (s) { return s; });
+  var root = (segs[0] || '').toLowerCase();
+  if (root === 'engagement' || root === 'wedding') return root;
+  if (root === 'jewellery') return segs.length >= 3 ? segs[1].toLowerCase() : 'jewellery';
+  return root || 'other';
+}
+
+/** Pretty-print a collection key (hyphens -> spaces, title case). */
+function prettyCollection_(key) {
+  return String(key || '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+}
+
+function buildProductsModule_(params) {
+  var w = params.window;
+  var note = 'Product names derived from page URLs — exact formatting may vary.';
+
+  var pagesR = tryGa4_(function () { return ga4ProductPageMetrics_(w, 100); });
+  var scrollR = tryGa4_(function () { return ga4ProductEventMap_(w, 'scroll_50_product'); });
+  var enquiryR = tryGa4_(function () { return ga4ProductEventMap_(w, 'enquiry_click'); });
+  var searchR = tryGa4_(function () { return ga4SiteSearchTerms_(w, 20); });
+
+  if (!pagesR.ok) {
+    return { source: 'ga4', available: false, note: note, error: pagesR.error, searchTerms: searchR };
+  }
+  var pages = pagesR.value;
+  var scroll = scrollR.ok ? scrollR.value : {};
+  var enquiry = enquiryR.ok ? enquiryR.value : {};
+
+  // Most viewed (by sessions).
+  var mostViewed = pages.slice().sort(function (a, b) { return b.sessions - a.sessions; }).slice(0, 10)
+    .map(function (p) { return { name: slugToName_(p.pagePath), pagePath: p.pagePath, sessions: p.sessions, views: p.views }; });
+
+  // Most engaged (by avg time; require a little volume to avoid 1-session noise).
+  var mostEngaged = pages.filter(function (p) { return p.sessions >= 5; })
+    .sort(function (a, b) { return b.avgDurationSec - a.avgDurationSec; }).slice(0, 10)
+    .map(function (p) { return { name: slugToName_(p.pagePath), pagePath: p.pagePath, avgDurationSec: p.avgDurationSec, sessions: p.sessions }; });
+
+  // Products generating scroll depth.
+  var scrollProducts = Object.keys(scroll).map(function (pp) {
+    return { name: slugToName_(pp), pagePath: pp, scrolls: scroll[pp] };
+  }).sort(function (a, b) { return b.scrolls - a.scrolls; }).slice(0, 10);
+
+  // High traffic / low enquiry: top 20 by views with <=1 enquiry.
+  var top20 = pages.slice().sort(function (a, b) { return b.views - a.views; }).slice(0, 20);
+  var lowEnquiry = top20.map(function (p) {
+    return { name: slugToName_(p.pagePath), pagePath: p.pagePath, views: p.views, sessions: p.sessions, enquiries: enquiry[p.pagePath] || 0 };
+  }).filter(function (p) { return p.enquiries <= 1; }).slice(0, 10);
+
+  // Collection performance (sessions + sessions-weighted avg engagement).
+  var colMap = {};
+  pages.forEach(function (p) {
+    var key = productCollection_(p.pagePath);
+    if (!colMap[key]) colMap[key] = { collection: prettyCollection_(key), sessions: 0, durWeighted: 0 };
+    colMap[key].sessions += p.sessions;
+    colMap[key].durWeighted += (p.avgDurationSec || 0) * (p.sessions || 0);
+  });
+  var collections = Object.keys(colMap).map(function (k) {
+    var c = colMap[k];
+    return { collection: c.collection, sessions: c.sessions, avgDurationSec: c.sessions > 0 ? c.durWeighted / c.sessions : 0 };
+  }).sort(function (a, b) { return b.sessions - a.sessions; });
+
+  return {
+    source: 'ga4',
+    available: true,
+    note: note,
+    mostViewed: mostViewed,
+    mostEngaged: mostEngaged,
+    scrollProducts: scrollProducts,
+    scrollAvailable: scrollR.ok,
+    lowEnquiry: lowEnquiry,
+    enquiryAvailable: enquiryR.ok,
+    collections: collections,
+    searchTerms: searchR
+  };
+}
