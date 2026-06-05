@@ -1,5 +1,7 @@
 /**
- * GMCProvider.gs — Google Merchant Centre (Content API for Shopping v2.1).
+ * GMCProvider.gs — Google Merchant Centre catalogue via the **Merchant API**
+ * (merchantapi.googleapis.com), the supported successor to the now-deprecated
+ * Content API for Shopping. Both use the same auth/content OAuth scope.
  *
  * Purpose: the authoritative product catalogue. GA4 only knows page paths;
  * Merchant Centre knows which of those paths are real products, their proper
@@ -10,7 +12,7 @@
  * `link` path matches GA4 `pagePath` directly.
  *
  * SETUP (one-off):
- *   1. Cloud Console → enable "Content API for Shopping".
+ *   1. Cloud Console → enable the "Merchant API".
  *   2. appsscript.json → add scope .../auth/content  (forces a re-authorise).
  *   3. Script Property GMC_MERCHANT_ID = your Merchant Centre account id.
  * Until GMC_MERCHANT_ID is set this provider is inert and the Product
@@ -63,17 +65,19 @@ function gmcCollectionFromTypes_(productTypes, googleProductCategory) {
 }
 
 /**
- * Fetch all products from Content API v2.1, following pagination.
- * Bounded to MAX_PAGES so a huge catalogue can't run us out of quota/time.
- * -> [ raw product resource, ... ]
+ * Fetch all products from the Merchant API products sub-API, following
+ * pagination. Bounded to MAX_PAGES so a huge catalogue can't run us out of
+ * quota/time. Each product carries its fields under `attributes`.
+ * -> [ product resource, ... ]
  */
 function gmcFetchAllProducts_() {
   var merchantId = gmcMerchantId_();
   if (!merchantId) throw new Error('GMC_MERCHANT_ID not set.');
 
-  var base = 'https://shoppingcontent.googleapis.com/content/v2.1/' +
-    encodeURIComponent(merchantId) + '/products?maxResults=250';
-  var MAX_PAGES = 40;                          // 40 × 250 = 10k product safety cap
+  // Merchant API: accounts/{account}/products, up to 1000 per page.
+  var base = 'https://merchantapi.googleapis.com/products/v1beta/accounts/' +
+    encodeURIComponent(merchantId) + '/products?pageSize=1000';
+  var MAX_PAGES = 40;                          // 40 × 1000 = 40k product safety cap
   var out = [];
   var pageToken = '';
 
@@ -87,14 +91,14 @@ function gmcFetchAllProducts_() {
     var code = resp.getResponseCode();
     var text = resp.getContentText();
     if (code === 403) {
-      throw new Error('GMC 403: enable "Content API for Shopping" in the Cloud ' +
-        'project and ensure the .../auth/content scope is authorised (re-deploy). ' + text);
+      throw new Error('GMC 403: enable the "Merchant API" in the Cloud project ' +
+        'and ensure the .../auth/content scope is authorised (re-deploy). ' + text);
     }
     if (code !== 200) {
       throw new Error('GMC API error ' + code + ': ' + text);
     }
     var json = JSON.parse(text);
-    (json.resources || []).forEach(function (p) { out.push(p); });
+    (json.products || []).forEach(function (p) { out.push(p); });
     pageToken = json.nextPageToken || '';
     if (!pageToken) break;
   }
@@ -121,15 +125,16 @@ function gmcBuildCatalogue_() {
   var products = gmcFetchAllProducts_();
   var byPath = {};
   products.forEach(function (p) {
-    if (!p.link) return;
-    var key = normalizePath_(p.link);
+    var a = p.attributes || {};               // Merchant API nests fields here
+    if (!a.link) return;
+    var key = normalizePath_(a.link);
     if (!key || key === '/') return;
     // First write wins; many feeds carry per-variant rows sharing a link.
     if (byPath[key]) return;
     byPath[key] = {
-      title: String(p.title || '').trim(),
-      image: p.imageLink || '',
-      collection: gmcCollectionFromTypes_(p.productTypes, p.googleProductCategory)
+      title: String(a.title || '').trim(),
+      image: a.imageLink || '',
+      collection: gmcCollectionFromTypes_(a.productTypes, a.googleProductCategory)
     };
   });
 

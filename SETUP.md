@@ -208,9 +208,13 @@ it's in the catalogue, or a root-level slug that isn't a known non-product
 page). It's **inert until `GMC_MERCHANT_ID` is set**, so nothing breaks before
 setup; until then the section falls back to URL-derived names.
 
-1. **Enable the API.** Cloud Console → APIs & Services → Library → enable
-   **Content API for Shopping** in project **`217450833455`**.
-2. **Authorise the new scope.** The manifest now declares
+Uses the **Merchant API** (`merchantapi.googleapis.com`) — the supported
+successor to the deprecated Content API for Shopping. Same `auth/content` scope.
+
+1. **Enable the API.** Cloud Console → APIs & Services → Library → enable the
+   **Merchant API** in project **`217450833455`**. (The older "Content API for
+   Shopping" is deprecated — don't use it.)
+2. **Authorise the scope.** The manifest declares
    `https://www.googleapis.com/auth/content`, so after `clasp push -f` run any
    function in the editor (e.g. `doGet`) and **re-Allow** the permissions, then
    cut a **new deployment version**.
